@@ -1,4 +1,4 @@
-import { Button, Flex, PasswordInput, Stack, Text, Title } from '@mantine/core'
+import { Button, Flex, PasswordInput, Select, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { createFileRoute } from '@tanstack/react-router'
 import { ofetch } from 'ofetch'
 import { useState } from 'react'
@@ -159,7 +159,7 @@ export function RouteComponent() {
                   { value: 'advanced', label: 'Advanced' },
                 ]}
                 value={extension.webSearch.tavilySearchDepth || 'basic'}
-                onChange={(e) =>
+                onChange={(e: string | null) =>
                   e &&
                   setSettings({
                     extension: {
@@ -198,7 +198,7 @@ export function RouteComponent() {
                   { value: '10', label: '10' },
                 ]}
                 value={String(extension.webSearch.tavilyMaxResults || 5)}
-                onChange={(e) =>
+                onChange={(e: string | null) =>
                   e &&
                   setSettings({
                     extension: {
@@ -232,7 +232,7 @@ export function RouteComponent() {
                   { value: 'year', label: 'Year' },
                 ]}
                 value={extension.webSearch.tavilyTimeRange || 'none'}
-                onChange={(e) =>
+                onChange={(e: string | null) =>
                   e &&
                   setSettings({
                     extension: {
@@ -264,7 +264,7 @@ export function RouteComponent() {
                   { value: 'markdown', label: 'Markdown' },
                 ]}
                 value={extension.webSearch.tavilyIncludeRawContent || 'none'}
-                onChange={(e) =>
+                onChange={(e: string | null) =>
                   e &&
                   setSettings({
                     extension: {
