@@ -1,0 +1,1 @@
+- [Deadlines & submission strategy](project_deadlines.md) — Tue planning, Thu early (feedback not graded hard), Sun final

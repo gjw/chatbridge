@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="height=device-height, width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="ChatBridge" />
+    <title>ChatBridge</title>
+    <script>
+      var initialTheme = localStorage.getItem("initial-theme");
+      if (initialTheme === "light" || initialTheme === "dark") {
+        document.documentElement.setAttribute("data-theme", initialTheme);
+        document.documentElement.setAttribute(
+          "data-mantine-color-scheme",
+          initialTheme
+        );
+      }
+    </script>
+    <style>
+      html[data-theme="dark"] {
+        background-color: #242424;
+      }
+
+      .splash-screen {
+        position: fixed;
+        z-index: 99999;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        opacity: 1;
+        background-color: #fff;
+        overflow: hidden;
+      }
+      html[data-theme="dark"] .splash-screen {
+        background-color: #242424;
+      }
+
+      .splash-screen-top {
+        flex: 2;
+      }
+      .splash-screen-bottom {
+        flex: 3;
+        width: 100%;
+        position: relative;
+      }
+      .splash-screen-content {
+        flex: 0 0 auto;
+        position: relative;
+      }
+
+      .splash-screen-title {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 700;
+        color: #495057;
+        font-size: 2rem;
+        margin: 0;
+      }
+      html[data-theme="dark"] .splash-screen-title {
+        color: #ced4da;
+      }
+
+      .splash-screen-fade-out {
+        animation: fade-out 0.5s ease-in-out forwards;
+      }
+
+      @keyframes fade-out {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <div class="splash-screen">
+      <div class="splash-screen-top"></div>
+      <div class="splash-screen-content">
+        <h1 class="splash-screen-title">ChatBridge</h1>
+      </div>
+      <div class="splash-screen-bottom" id="log-root"></div>
+    </div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
