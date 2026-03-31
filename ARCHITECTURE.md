@@ -507,7 +507,35 @@ Content-Security-Policy:
 1. **LLM responses** — filtered before streaming to client via middleware
 2. **Tool results** — filtered before returning to LLM context
 
-Filter implementation: keyword blocklist + LLM-based classification for ambiguous content.
+#### Three-tier filter pipeline
+
+| Tier | Latency | What it catches | Response |
+|------|---------|----------------|----------|
+| **1. Keyword blocklist** | <1ms | Profanity, slurs, known-bad patterns | Redact + log |
+| **2. Fast classifier** | ~50ms | Crisis signals (self-harm, violence, abuse disclosure), bullying, sexual content. Cheap no-reasoning model (e.g. Gemini Flash/Nano, Haiku). Sentiment + intent, not just words. | Tier-appropriate alert (see below) |
+| **3. Full LLM review** | ~1s | Ambiguous content that passes tiers 1-2 but seems off. Only triggered when tier 2 confidence is low. | Hold + async review |
+
+Tier 2 is the critical addition for K-12. "I hate math" is frustration. "I hate my
+life" is a crisis signal. A keyword list can't tell the difference — a cheap fast
+model can. The cost of a Nano/Haiku call per flagged message is negligible compared
+to the cost of missing a cry for help.
+
+#### Alert severity levels
+
+| Severity | Example | Action |
+|----------|---------|--------|
+| **Low** | Profanity | Redact, log, visible in teacher's filtered content dashboard |
+| **Medium** | Bullying language, inappropriate sexual content | Redact, log, **push notification to teacher** |
+| **Critical** | Self-harm, violence threats, abuse disclosure | Redact, log, **immediate push alert to teacher + school admin**, flag conversation for review |
+
+#### Teacher controls (per-classroom, immediate effect)
+
+- **View filtered content log** — dashboard showing flagged messages with severity
+- **Real-time alerts** — push notifications for medium/critical events
+- **Instant session kill** — teacher can terminate a student's active session
+- **Per-classroom app disable** — teacher disables an app for their classroom immediately, no admin needed
+- **Blocklist customization** — add/remove keywords per classroom
+
 Configurable per-school or per-classroom by teachers/admins.
 
 **Visual iframe content is a known gap.** Browser isolation works both ways — we
