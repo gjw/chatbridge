@@ -1,0 +1,25 @@
+# Project Manifest
+
+[project]
+name = "ChatBridge"
+description = "AI chat platform with third-party app integration — fork of Chatbox with plugin architecture"
+prefix = "cb"
+glance_hue = 250                     # Gauntlet project hue
+
+# Which roles are active
+[roles]
+tower = true
+trench = true
+herald = false
+warden = false
+
+[build]
+stack = "typescript"
+workflow = "beads"
+
+[beads]
+command = "br"
+sync_command = "br sync --flush-only"
+
+[integrations]
+cass_memory = false
