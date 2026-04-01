@@ -1,0 +1,48 @@
+{
+  "slug": "wordle",
+  "name": "Wordle",
+  "description": "A word guessing game. Guess the 5-letter word in 6 tries. Each guess must be a valid English word, validated via dictionary API.",
+  "trustTier": "external_public",
+  "entryUrl": "http://localhost:3201",
+  "tools": [
+    {
+      "name": "start_game",
+      "description": "Start a new Wordle game. A random 5-letter target word is chosen. The player has 6 guesses.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "hardMode": {
+            "type": "boolean",
+            "description": "If true, revealed hints must be used in subsequent guesses. Defaults to false."
+          }
+        }
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "guess_word",
+      "description": "Submit a 5-letter word guess. The word is validated against a dictionary API. Returns letter-by-letter results: 'correct' (green), 'present' (yellow), or 'absent' (gray).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "word": {
+            "type": "string",
+            "description": "A 5-letter English word to guess"
+          }
+        },
+        "required": ["word"]
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "get_status",
+      "description": "Get the current game status including all guesses made so far and their results.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "rendersUi": false
+    }
+  ],
+  "permissions": ["ui:render", "api:proxy"]
+}
