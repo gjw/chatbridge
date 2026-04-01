@@ -3,8 +3,12 @@ import { z } from 'zod'
 import type { Response as ExpressResponse } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { queryRows, queryOne, execute } from '../db/queries.js'
-import { ConversationRowSchema, MessageRowSchema } from '../db/schemas.js'
+import { ConversationRowSchema, MessageRowSchema, AppRowSchema } from '../db/schemas.js'
 import { createSafeLLM, streamText } from '../services/llm.js'
+import { stepCountIs } from 'ai'
+import { buildToolSet } from '../services/tools.js'
+import { submitResult as submitToolResult } from '../services/toolCalls.js'
+import { AppToolDefSchema } from '../shared/app-schemas.js'
 import type { ModelMessage } from '@ai-sdk/provider-utils'
 
 const router = Router()
@@ -24,6 +28,15 @@ const SendMessageBody = z.object({
 
 const ConversationIdParam = z.object({
   id: z.string().uuid(),
+})
+
+const ToolResultBody = z.object({
+  result: z.unknown(),
+})
+
+const ToolResultParams = z.object({
+  id: z.string().uuid(),
+  toolCallId: z.string().min(1),
 })
 
 // ---------------------------------------------------------------------------
@@ -174,11 +187,44 @@ router.post('/:id/messages', async (req, res, next) => {
       if (row.role === 'assistant') {
         return { role: 'assistant' as const, content: text }
       }
-      // system / tool messages — treat as system
       return { role: 'system' as const, content: text }
     })
 
-    // 4. Create placeholder assistant message in DB
+    // 4. Fetch user's enabled apps and build tool set
+    const enabledApps = await queryRows(
+      AppRowSchema,
+      `SELECT a.* FROM apps a
+       JOIN app_installations ai ON ai.app_id = a.id
+       WHERE ai.user_id = $1 AND ai.enabled = true AND a.status = 'approved'`,
+      [userId],
+    )
+
+    const write = (data: Record<string, unknown>) => sseWrite(res, data)
+
+    const appToolData = enabledApps.map((app) => {
+      const manifest = app.manifest as Record<string, unknown>
+      const rawTools = (manifest as { tools?: unknown[] }).tools ?? []
+      const tools = rawTools
+        .map((t) => AppToolDefSchema.safeParse(t))
+        .filter((r) => r.success)
+        .map((r) => r.data)
+      return {
+        appId: app.id,
+        slug: app.slug,
+        entryUrl: (manifest as { entryUrl?: string }).entryUrl ?? '',
+        tools,
+      }
+    })
+
+    const tools = buildToolSet(appToolData, {
+      userId,
+      res,
+      sseWrite: write,
+    })
+
+    const hasTools = Object.keys(tools).length > 0
+
+    // 5. Create placeholder assistant message in DB
     const assistantMsg = await queryOne(
       MessageRowSchema,
       `INSERT INTO messages (conversation_id, role, content, model)
@@ -187,39 +233,68 @@ router.post('/:id/messages', async (req, res, next) => {
       [conversationId, JSON.stringify([{ type: 'text', text: '' }]), 'gpt-4o-mini'],
     )
 
-    // 5. Set up SSE response
+    // 6. Set up SSE response
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
     res.setHeader('X-Accel-Buffering', 'no')
     res.flushHeaders()
 
-    // Send the message IDs so the client knows what was created
     sseWrite(res, {
       type: 'message-ids',
       userMessageId: userMsg.id,
       assistantMessageId: assistantMsg.id,
     })
 
-    // 6. Stream LLM response
+    // 7. Stream LLM response with tools
     const model = createSafeLLM()
     const abortController = new AbortController()
     req.on('close', () => abortController.abort())
 
-    const result = streamText({
+    const streamOptions = {
       model,
-      system: 'You are ChatBridge, a helpful AI assistant for students. Be concise, accurate, and educational.',
+      system: 'You are ChatBridge, a helpful AI assistant for students. Be concise, accurate, and educational. When a tool is available that can help answer the question, use it.',
       messages: llmMessages,
       abortSignal: abortController.signal,
-    })
+      ...(hasTools ? { tools, stopWhen: stepCountIs(5) } : {}),
+    }
+    const result = streamText(streamOptions)
 
+    // 8. Iterate full stream for both text and tool events
     let fullText = ''
-    for await (const chunk of result.textStream) {
-      fullText += chunk
-      sseWrite(res, { type: 'text-delta', text: chunk })
+    for await (const part of result.fullStream) {
+      switch (part.type) {
+        case 'text-delta': {
+          fullText += part.text
+          sseWrite(res, { type: 'text-delta', text: part.text })
+          break
+        }
+        case 'tool-call': {
+          // tool-call SSE is sent by the execute function in buildToolSet
+          // Just log here
+          console.info('[chat] Tool call:', part.toolName, part.toolCallId)
+          break
+        }
+        case 'tool-result': {
+          sseWrite(res, {
+            type: 'tool-result',
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            result: part.output,
+          })
+          break
+        }
+        case 'error': {
+          sseWrite(res, { type: 'error', error: String(part.error) })
+          break
+        }
+        // Ignore other part types (text-start, text-end, step markers, etc.)
+        default:
+          break
+      }
     }
 
-    // 7. Get usage and persist
+    // 9. Get usage and persist
     const usage = await result.usage
     sseWrite(res, {
       type: 'done',
@@ -229,7 +304,7 @@ router.post('/:id/messages', async (req, res, next) => {
       },
     })
 
-    // 8. Update assistant message with full text and usage
+    // 10. Update assistant message with full text and usage
     await execute(
       `UPDATE messages SET content = $1, token_usage = $2 WHERE id = $3`,
       [
@@ -239,7 +314,7 @@ router.post('/:id/messages', async (req, res, next) => {
       ],
     )
 
-    // 9. Update conversation timestamp
+    // 11. Update conversation timestamp
     await execute(
       `UPDATE conversations SET updated_at = now() WHERE id = $1`,
       [conversationId],
@@ -247,12 +322,40 @@ router.post('/:id/messages', async (req, res, next) => {
 
     res.end()
   } catch (err) {
-    // If headers already sent (streaming started), end the stream with error
     if (res.headersSent) {
       sseWrite(res, { type: 'error', error: err instanceof Error ? err.message : 'Unknown error' })
       res.end()
       return
     }
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// POST /conversations/:id/tool-result/:toolCallId — submit tool result
+// ---------------------------------------------------------------------------
+
+router.post('/:id/tool-result/:toolCallId', async (req, res, next) => {
+  try {
+    const { id: conversationId, toolCallId } = ToolResultParams.parse(req.params)
+    const { result } = ToolResultBody.parse(req.body)
+    const userId = req.user!.sub
+
+    // Verify conversation belongs to user
+    await queryOne(
+      ConversationRowSchema,
+      `SELECT * FROM conversations WHERE id = $1 AND user_id = $2`,
+      [conversationId, userId],
+    )
+
+    const found = submitToolResult(toolCallId, result)
+    if (!found) {
+      res.status(404).json({ error: 'Tool call not found or already completed' })
+      return
+    }
+
+    res.status(204).end()
+  } catch (err) {
     next(err)
   }
 })
