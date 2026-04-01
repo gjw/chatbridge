@@ -1,0 +1,81 @@
+{
+  "slug": "chess",
+  "name": "Chess",
+  "description": "Play chess interactively. The LLM can start games, make moves, and analyze positions.",
+  "trustTier": "internal",
+  "entryUrl": "http://localhost:3200",
+  "tools": [
+    {
+      "name": "start_game",
+      "description": "Start a new chess game. Returns the initial board state.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "type": "string",
+            "enum": ["white", "black"],
+            "description": "Which color the human player plays. Defaults to white."
+          }
+        }
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "move_piece",
+      "description": "Make a chess move using algebraic notation (e.g. from='e2', to='e4'). Only legal moves are accepted.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Source square in algebraic notation (e.g. 'e2')"
+          },
+          "to": {
+            "type": "string",
+            "description": "Target square in algebraic notation (e.g. 'e4')"
+          },
+          "promotion": {
+            "type": "string",
+            "enum": ["q", "r", "b", "n"],
+            "description": "Promotion piece (queen/rook/bishop/knight) if pawn reaches last rank"
+          }
+        },
+        "required": ["from", "to"]
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "get_board_state",
+      "description": "Get the current board state including FEN, whose turn it is, move count, and game status.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "rendersUi": false
+    },
+    {
+      "name": "get_legal_moves",
+      "description": "Get legal moves, optionally filtered to a specific square.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "square": {
+            "type": "string",
+            "description": "Optional square to get moves for (e.g. 'e2'). If omitted, returns all legal moves."
+          }
+        }
+      },
+      "rendersUi": false
+    },
+    {
+      "name": "resign",
+      "description": "Resign the current game.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "rendersUi": false
+    }
+  ],
+  "permissions": ["ui:render"]
+}
