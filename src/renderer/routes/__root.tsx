@@ -216,7 +216,7 @@ function Root() {
       const sid = JSON.parse(localStorage.getItem('_currentSessionIdCachedAtom') || '""') as string
       if (sid && startupPage === 'session') {
         router.navigate({
-          to: `/session/${sid}`,
+          to: `/session/${sid}` as '/',
           replace: true,
         })
       }
@@ -234,7 +234,7 @@ function Root() {
           const settingsPath = path.substring('/settings'.length)
           navigateToSettings(settingsPath || '/')
         } else {
-          router.navigate({ to: path })
+          router.navigate({ to: path as '/' })
         }
       })
     }

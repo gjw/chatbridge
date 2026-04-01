@@ -22,6 +22,12 @@ export const aiProviderNameHash: Record<ModelProviderEnum, string> = {
   [ModelProviderEnum.Perplexity]: 'Perplexity API',
   [ModelProviderEnum.XAI]: 'xAI API',
   [ModelProviderEnum.OpenRouter]: 'OpenRouter API',
+  [ModelProviderEnum.MiniMax]: 'MiniMax API',
+  [ModelProviderEnum.MiniMaxCN]: 'MiniMax CN API',
+  [ModelProviderEnum.Moonshot]: 'Moonshot AI',
+  [ModelProviderEnum.MoonshotCN]: 'Moonshot CN',
+  [ModelProviderEnum.Qwen]: 'Qwen API',
+  [ModelProviderEnum.QwenPortal]: 'Qwen Portal API',
   [ModelProviderEnum.Custom]: 'Custom Provider',
 }
 

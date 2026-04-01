@@ -36,3 +36,4 @@ export {
 export type { SummaryGeneratorOptions, SummaryResult } from './summary-generator'
 export { generateSummary, generateSummaryWithStream, isSummaryGenerationAvailable } from './summary-generator'
 export { cleanToolCalls } from './tool-cleanup'
+export { computeContextAfterCompaction } from './context-compaction'

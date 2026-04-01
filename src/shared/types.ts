@@ -6,6 +6,7 @@ import {
   MessageRoleEnum,
   type Session,
   type SessionThread,
+  type TaskSession,
   type TokenCountMap,
 } from './types/session'
 import type { DocumentParserConfig, DocumentParserType } from './types/settings'

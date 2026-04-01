@@ -107,7 +107,7 @@ export function switchCurrentSession(sessionId: string) {
   const store = getDefaultStore()
   store.set(atoms.currentSessionIdAtom, sessionId)
   router.navigate({
-    to: `/session/${sessionId}`,
+    to: `/session/${sessionId}` as '/',
   })
   scrollActions.clearAutoScroll()
 }

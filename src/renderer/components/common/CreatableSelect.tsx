@@ -51,8 +51,8 @@ export default function CreatableSelect(props: {
         if (!options.includes(option)) {
           return (
             <li
-              key={option}
               {...props}
+              key={option}
               onClick={() => {
                 onUpdateOptions([option, ...options])
               }}
@@ -64,8 +64,8 @@ export default function CreatableSelect(props: {
         }
         return (
           <li
-            key={option}
             {...props}
+            key={option}
             className={cn('flex items-center justify-between px-4 py-1', 'hover:bg-gray-400/50 cursor-pointer')}
           >
             <span>{option}</span>

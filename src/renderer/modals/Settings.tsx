@@ -50,8 +50,8 @@ export const SettingsModal: FC<SettingsModalProps> = (props) => {
   const onClose = useCallback(() => {
     const { settings: _, ...otherSearch } = router.state.location.search as { settings?: string }
     router.navigate({
-      to: router.state.location.pathname,
-      search: otherSearch,
+      to: router.state.location.pathname as '/',
+      search: otherSearch as Record<string, unknown>,
     })
   }, [])
 
@@ -111,14 +111,14 @@ export default SettingsModal
 export function navigateToSettings(path?: string) {
   if (window.matchMedia(`(max-width:${getThemeDesign('light', 16, 'en').breakpoints?.values?.sm || 640}px)`).matches) {
     router.navigate({
-      to: `/settings${path ? (path.startsWith('/') ? path : `/${path}`) : ''}`,
+      to: `/settings${path ? (path.startsWith('/') ? path : `/${path}`) : ''}` as '/settings',
     })
   } else {
     router.navigate({
-      to: router.state.location.pathname,
+      to: router.state.location.pathname as '/',
       search: {
         settings: `/settings${path ? (path.startsWith('/') ? path : `/${path}`) : ''}`,
-      },
+      } as Record<string, unknown>,
       mask: {
         to: '/settings',
       },

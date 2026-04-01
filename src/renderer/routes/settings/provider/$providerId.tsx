@@ -248,7 +248,7 @@ function ProviderSettings({ providerId }: { providerId: string }) {
       // Callback flow: single step (OpenAI, Gemini)
       setOAuthLoading(true)
       try {
-        const result = await loginCallback()
+        const result = await loginCallback!()
         if (!result.success && result.error !== 'Login cancelled') {
           addToast(result.error || t('Login failed'))
         }

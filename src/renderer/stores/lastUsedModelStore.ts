@@ -11,6 +11,10 @@ type State = {
     provider: string
     modelId: string
   }
+  task?: {
+    provider: string
+    modelId: string
+  }
 }
 
 export const lastUsedModelStore = createStore(

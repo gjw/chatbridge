@@ -316,3 +316,10 @@ export type Session = z.infer<typeof SessionSchema>
 export type SessionMeta = z.infer<typeof SessionMetaSchema>
 export type SessionThread = z.infer<typeof SessionThreadSchema>
 export type SessionThreadBrief = z.infer<typeof SessionThreadBriefSchema>
+
+export interface TaskSession {
+  id: string
+  messages: Message[]
+  compactionPoints?: CompactionPoint[]
+  settings?: z.infer<typeof SessionSettingsSchema>
+}
