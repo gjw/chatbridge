@@ -92,7 +92,21 @@ CREATE TABLE conversation_summaries (
     created_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- Content filter log
+CREATE TABLE content_filter_log (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID REFERENCES users(id),
+    conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+    content         TEXT NOT NULL,
+    matched_words   TEXT[] NOT NULL DEFAULT '{}',
+    severity        TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'critical')),
+    source          TEXT NOT NULL CHECK (source IN ('llm_output', 'tool_result', 'user_input')),
+    action_taken    TEXT NOT NULL CHECK (action_taken IN ('redacted', 'blocked', 'logged')),
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX idx_messages_conversation ON messages(conversation_id, created_at);
 CREATE INDEX idx_invocations_user ON tool_invocations(user_id, created_at);
 CREATE INDEX idx_apps_status ON apps(status);
 CREATE INDEX idx_summaries_user ON conversation_summaries(user_id, created_at);
+CREATE INDEX idx_filter_log_user ON content_filter_log(user_id, created_at);

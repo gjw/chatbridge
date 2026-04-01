@@ -87,3 +87,16 @@ export const ConversationSummaryRowSchema = z.object({
   created_at: z.date(),
 })
 export type ConversationSummaryRow = z.infer<typeof ConversationSummaryRowSchema>
+
+export const ContentFilterLogRowSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid().nullable(),
+  conversation_id: z.string().uuid().nullable(),
+  content: z.string(),
+  matched_words: z.array(z.string()),
+  severity: z.enum(['low', 'medium', 'critical']),
+  source: z.enum(['llm_output', 'tool_result', 'user_input']),
+  action_taken: z.enum(['redacted', 'blocked', 'logged']),
+  created_at: z.date(),
+})
+export type ContentFilterLogRow = z.infer<typeof ContentFilterLogRowSchema>
