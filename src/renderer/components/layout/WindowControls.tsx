@@ -1,5 +1,5 @@
 import { ActionIcon, type ActionIconProps, Flex, type FlexProps, Tooltip } from '@mantine/core'
-import { IconMinus, type IconProps, IconSquare, IconSquares, IconX } from '@tabler/icons-react'
+import { IconMinus, type IconProps, IconSquare, IconSquares, IconX, type TablerIcon } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { useAtomValue } from 'jotai'
 import { type FC, memo } from 'react'
@@ -15,14 +15,14 @@ export const WindowControls: FC<FlexProps> = ({ className, ...otherProps }) => {
   const platformType = useAtomValue(platformTypeAtom)
   return platformType === 'win32' || platformType === 'linux' ? (
     <Flex align="center" className={clsx('controls self-start', className)} {...otherProps}>
-      <ControlButton label={t('Minimize')} icon={IconMinus} onClick={() => platform.minimize()} />
+      <ControlButton label={String(t('Minimize'))} icon={IconMinus} onClick={() => platform.minimize()} />
       {!windowMaximized ? (
-        <ControlButton label={t('Maximize')} icon={IconSquare} onClick={() => platform.maximize()} />
+        <ControlButton label={String(t('Maximize'))} icon={IconSquare} onClick={() => platform.maximize()} />
       ) : (
-        <ControlButton label={t('Restore')} icon={IconSquares} onClick={() => platform.unmaximize()} />
+        <ControlButton label={String(t('Restore'))} icon={IconSquares} onClick={() => platform.unmaximize()} />
       )}
       <ControlButton
-        label={t('Close')}
+        label={String(t('Close'))}
         icon={IconX}
         className="hover:bg-chatbox-tint-error"
         onClick={() => platform.closeWindow()}
@@ -35,7 +35,7 @@ export default memo(WindowControls)
 
 type ControlButtonProps = {
   label?: string
-  icon: React.ElementType<IconProps>
+  icon: TablerIcon
   onClick?(): void
 } & ActionIconProps
 
