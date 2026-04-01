@@ -53,7 +53,7 @@ export function isContextLengthError(errorText: string | null | undefined): bool
   return false
 }
 
-export default function MessageErrTips(props: { msg: Message }) {
+export default function MessageErrTips(props: { msg: Message; onRetry?: () => void; isBubbleLayout?: boolean }) {
   const { msg } = props
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)

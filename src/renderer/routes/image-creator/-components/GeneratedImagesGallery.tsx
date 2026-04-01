@@ -37,7 +37,7 @@ export const GeneratedImagesGallery = memo(function GeneratedImagesGallery({
         outlineID: 'pswp__icn-download',
       },
       appendTo: 'bar',
-      onClick: async (_e: PointerEvent, _el: HTMLElement, pswp: PhotoSwipe) => {
+      onClick: async (_e: MouseEvent, _el: HTMLElement, pswp: PhotoSwipe) => {
         const storageKey = storageKeysRef.current[pswp.currIndex]
         if (storageKey) {
           const base64 = await storage.getBlob(storageKey)

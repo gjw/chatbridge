@@ -23,16 +23,19 @@ declare module '@mastra/core/vector' {
     score: number
     metadata?: Record<string, unknown>
     document?: string
+    [key: string]: unknown
   }
 }
 declare module '@mastra/rag/dist/rerank' {
   export interface RerankerFunctionOptions {
     topK?: number
     weights?: { semantic?: number; vector?: number; position?: number }
+    [key: string]: unknown
   }
   export interface RerankResult {
     result: import('@mastra/core/vector').QueryResult
     score: number
     details: Record<string, unknown>
+    [key: string]: unknown
   }
 }

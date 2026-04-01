@@ -373,8 +373,8 @@ describe('migrateStorage test', () => {
     const { default: DesktopPlatformClass } = await import('@/platform/desktop_platform')
     const { default: MobilePlatformClass } = await import('@/platform/mobile_platform')
 
-    desktopPlatform = new DesktopPlatformClass(window.electronAPI)
-    mobilePlatform = new MobilePlatformClass()
+    desktopPlatform = new DesktopPlatformClass(window.electronAPI) as Platform
+    mobilePlatform = new MobilePlatformClass() as Platform
     currentPlatform = desktopPlatform
   })
 
