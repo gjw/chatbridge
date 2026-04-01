@@ -38,16 +38,17 @@ export type SettingsModalProps = {}
 export const SettingsModal: FC<SettingsModalProps> = (props) => {
   const { t } = useTranslation()
   const location = useLocation()
+  const search = location.search as { settings?: string }
   const { needRoomForMacWindowControls } = useNeedRoomForWinControls()
 
   useEffect(() => {
-    if (location.search.settings) {
-      settingsModalHistory.replace(location.search.settings)
+    if (search.settings) {
+      settingsModalHistory.replace(search.settings)
     }
-  }, [location.search.settings])
+  }, [search.settings])
 
   const onClose = useCallback(() => {
-    const { settings: _, ...otherSearch } = router.state.location.search
+    const { settings: _, ...otherSearch } = router.state.location.search as { settings?: string }
     router.navigate({
       to: router.state.location.pathname,
       search: otherSearch,
@@ -56,7 +57,7 @@ export const SettingsModal: FC<SettingsModalProps> = (props) => {
 
   return (
     <Modal
-      opened={!!location.search.settings}
+      opened={!!search.settings}
       onClose={onClose}
       // size="1200"
       fullScreen={true}

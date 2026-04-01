@@ -571,6 +571,9 @@ const creteMantineTheme = (scale = 1) =>
   })
 
 export const Route = createRootRoute({
+  validateSearch: (search: Record<string, unknown>): { settings?: string } => ({
+    settings: typeof search.settings === 'string' ? search.settings : undefined,
+  }),
   component: () => {
     useI18nEffect()
     premiumActions.useAutoValidate() // 每次启动都执行 license 检查，防止用户在lemonsqueezy管理页面中取消了当前设备的激活
