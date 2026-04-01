@@ -353,6 +353,7 @@ function ServerChatPage() {
                   appId={activeToolCall.appId}
                   entryUrl={activeToolCall.appEntryUrl}
                   sessionId={activeId}
+                  accessToken={accessToken}
                 />
               </Box>
             )}

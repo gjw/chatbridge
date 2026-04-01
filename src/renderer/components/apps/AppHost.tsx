@@ -7,6 +7,7 @@ import {
   createInvocationId,
   INVOCATION_TIMEOUT_MS,
 } from '@/lib/bridge'
+import { proxyApiRequest } from '@/lib/api'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,6 +20,8 @@ export interface AppHostProps {
   entryUrl: string
   /** Current session/conversation ID */
   sessionId: string
+  /** Auth token for API proxy requests */
+  accessToken?: string
   /** Theme to pass to the app */
   theme?: { mode: 'light' | 'dark'; accent: string }
   /** Callback when tool invocation result comes back */
@@ -51,7 +54,7 @@ interface PendingInvocation {
 // ---------------------------------------------------------------------------
 
 export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
-  { appId, entryUrl, sessionId, theme, onToolResult, onToolError, onReady, className },
+  { appId, entryUrl, sessionId, accessToken, theme, onToolResult, onToolError, onReady, className },
   ref,
 ) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -124,8 +127,38 @@ export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
       }
 
       case 'bridge:api:request': {
-        // Stub — API proxying will be implemented in the tool pipeline task
-        console.warn('[AppHost] bridge:api:request not yet implemented', message.requestId)
+        if (!accessToken) {
+          console.warn('[AppHost] bridge:api:request received but no accessToken available')
+          break
+        }
+        const iframe = iframeRef.current
+        if (!iframe) break
+
+        void (async () => {
+          try {
+            const proxyResult = await proxyApiRequest(
+              accessToken,
+              appId,
+              message.url,
+              message.method,
+              message.headers ?? undefined,
+              message.body ?? undefined,
+            )
+            postToApp(iframe, {
+              type: 'bridge:api:response',
+              requestId: message.requestId,
+              status: proxyResult.status as number,
+              body: proxyResult.body,
+            }, targetOrigin)
+          } catch (err: unknown) {
+            postToApp(iframe, {
+              type: 'bridge:api:response',
+              requestId: message.requestId,
+              status: 500,
+              body: { error: err instanceof Error ? err.message : 'Proxy request failed' },
+            }, targetOrigin)
+          }
+        })()
         break
       }
 

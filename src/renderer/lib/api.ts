@@ -278,3 +278,28 @@ export async function getEnabledApps(token: string) {
   })
   return z.array(EnabledAppSchema).parse(raw)
 }
+
+// ---------------------------------------------------------------------------
+// API Proxy
+// ---------------------------------------------------------------------------
+
+const ProxyResponseSchema = z.object({
+  status: z.number(),
+  body: z.unknown(),
+})
+
+export async function proxyApiRequest(
+  token: string,
+  appId: string,
+  url: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  headers?: Record<string, string>,
+  body?: unknown,
+) {
+  const raw = await ofetch('/api/proxy', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: { appId, url, method, headers, body },
+  })
+  return ProxyResponseSchema.parse(raw)
+}
