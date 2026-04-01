@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Badge,
   Box,
   Button,
   Group,
@@ -17,6 +18,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from '@/lib/api'
 import type { Conversation, ConversationWithMessages, SseEvent } from '@/lib/api'
 import { useAuthInfoStore } from '@/stores/authInfoStore'
+import { AppHost } from '@/components/apps/AppHost'
+import type { AppHostHandle } from '@/components/apps/AppHost'
 
 export const Route = createFileRoute('/server-chat')({
   component: ServerChatPage,
@@ -32,6 +35,17 @@ interface DisplayMessage {
   text: string
 }
 
+interface ActiveToolCall {
+  toolCallId: string
+  toolName: string
+  args: Record<string, unknown>
+  appSlug: string
+  appId: string
+  appEntryUrl: string
+  rendersUi: boolean
+  status: 'invoking' | 'done' | 'error'
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -43,10 +57,11 @@ function ServerChatPage() {
   const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [activeToolCall, setActiveToolCall] = useState<ActiveToolCall | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const appHostRef = useRef<AppHostHandle>(null)
 
-  // Redirect hint if not logged in
   if (!accessToken) {
     return (
       <Box p="xl">
@@ -69,13 +84,11 @@ function ServerChatPage() {
     [accessToken],
   )
 
-  // Load conversations on mount
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     void loadConversations()
   }, [loadConversations])
 
-  // Auto-scroll on new messages
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
@@ -97,17 +110,94 @@ function ServerChatPage() {
     }
   }
 
+  const handleToolCall = async (evt: SseEvent & { type: 'tool-call' }) => {
+    if (!activeId) return
+
+    setActiveToolCall({
+      toolCallId: evt.toolCallId,
+      toolName: evt.toolName,
+      args: evt.args,
+      appSlug: evt.appSlug,
+      appId: evt.appId,
+      appEntryUrl: evt.appEntryUrl,
+      rendersUi: evt.rendersUi,
+      status: 'invoking',
+    })
+
+    // Add a tool status message
+    setMessages((prev) => [
+      ...prev,
+      { id: `tool-${evt.toolCallId}`, role: 'tool' as const, text: `Invoking ${evt.appSlug}/${evt.toolName}...` },
+    ])
+
+    try {
+      // Wait for AppHost to be ready and invoke
+      // Give iframe time to load — the AppHost onReady callback will fire
+      // For now, wait a short period then invoke
+      const waitForReady = (): Promise<void> =>
+        new Promise((resolve) => {
+          const check = () => {
+            if (appHostRef.current?.isReady) {
+              resolve()
+            } else {
+              setTimeout(check, 100)
+            }
+          }
+          check()
+          // Timeout after 10s waiting for ready
+          setTimeout(resolve, 10_000)
+        })
+
+      await waitForReady()
+
+      if (!appHostRef.current?.isReady) {
+        // App didn't signal ready — submit error
+        await api.submitToolResult(accessToken, activeId, evt.toolCallId, { error: 'App failed to initialize' })
+        setActiveToolCall((prev) => prev ? { ...prev, status: 'error' } : null)
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === `tool-${evt.toolCallId}` ? { ...m, text: `${evt.appSlug}/${evt.toolName}: App failed to initialize` } : m,
+          ),
+        )
+        return
+      }
+
+      const result = await appHostRef.current.invoke(evt.toolName, evt.args)
+
+      // Submit result back to server
+      await api.submitToolResult(accessToken, activeId, evt.toolCallId, result)
+
+      setActiveToolCall((prev) => prev ? { ...prev, status: 'done' } : null)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === `tool-${evt.toolCallId}`
+            ? { ...m, text: `${evt.appSlug}/${evt.toolName}: ${JSON.stringify(result)}` }
+            : m,
+        ),
+      )
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      // Submit error as result so LLM can continue
+      await api.submitToolResult(accessToken, activeId, evt.toolCallId, { error: errorMsg })
+
+      setActiveToolCall((prev) => prev ? { ...prev, status: 'error' } : null)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === `tool-${evt.toolCallId}` ? { ...m, text: `${evt.appSlug}/${evt.toolName}: Error — ${errorMsg}` } : m,
+        ),
+      )
+    }
+  }
+
   const handleSend = async () => {
     if (!activeId || !input.trim() || streaming) return
 
     const userText = input.trim()
     setInput('')
 
-    // Optimistic: add user message
     const tempUserId = `temp-${Date.now()}`
     setMessages((prev) => [...prev, { id: tempUserId, role: 'user', text: userText }])
 
-    // Add placeholder assistant message
     const tempAssistantId = `temp-assistant-${Date.now()}`
     setMessages((prev) => [...prev, { id: tempAssistantId, role: 'assistant', text: '' }])
 
@@ -123,7 +213,6 @@ function ServerChatPage() {
       )) {
         const evt = event as SseEvent
         if (evt.type === 'message-ids') {
-          // Replace temp IDs with real ones
           setMessages((prev) =>
             prev.map((m) => {
               if (m.id === tempUserId) return { ...m, id: evt.userMessageId }
@@ -137,12 +226,18 @@ function ServerChatPage() {
             if (!last || last.role !== 'assistant') return prev
             return [...prev.slice(0, -1), { ...last, text: last.text + evt.text }]
           })
+        } else if (evt.type === 'tool-call') {
+          // Handle tool invocation asynchronously — the server's execute()
+          // is blocked waiting for our result
+          void handleToolCall(evt)
+        } else if (evt.type === 'tool-result') {
+          // LLM got the result, remove the active tool call UI
+          setActiveToolCall(null)
         }
-        // 'done' and 'error' handled implicitly — streaming ends
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        // User cancelled — ignore
+        // User cancelled
       } else {
         const msg = err instanceof Error ? err.message : 'Unknown error'
         setMessages((prev) => {
@@ -153,8 +248,8 @@ function ServerChatPage() {
       }
     } finally {
       setStreaming(false)
+      setActiveToolCall(null)
       abortRef.current = null
-      // Refresh conversation list to update timestamps
       void loadConversations()
     }
   }
@@ -221,12 +316,21 @@ function ServerChatPage() {
                       backgroundColor:
                         m.role === 'user'
                           ? 'var(--mantine-color-blue-light)'
-                          : 'var(--mantine-color-default)',
+                          : m.role === 'tool'
+                            ? 'var(--mantine-color-grape-light)'
+                            : 'var(--mantine-color-default)',
                     }}
                   >
-                    <Text size="xs" c="dimmed" mb={4}>
-                      {m.role}
-                    </Text>
+                    <Group gap={4} mb={4}>
+                      <Text size="xs" c="dimmed">
+                        {m.role}
+                      </Text>
+                      {m.role === 'tool' && (
+                        <Badge size="xs" variant="light" color="grape">
+                          tool
+                        </Badge>
+                      )}
+                    </Group>
                     <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
                       {m.text || (streaming && m.role === 'assistant' ? '...' : '')}
                     </Text>
@@ -234,6 +338,24 @@ function ServerChatPage() {
                 ))}
               </Stack>
             </ScrollArea>
+
+            {/* App iframe (shown when a tool call is active with rendersUi) */}
+            {activeToolCall?.rendersUi && activeToolCall.status === 'invoking' && (
+              <Box
+                p="sm"
+                style={{ borderTop: '1px solid var(--mantine-color-default-border)', maxHeight: 400 }}
+              >
+                <Text size="xs" c="dimmed" mb={4}>
+                  App: {activeToolCall.appSlug}
+                </Text>
+                <AppHost
+                  ref={appHostRef}
+                  appId={activeToolCall.appId}
+                  entryUrl={activeToolCall.appEntryUrl}
+                  sessionId={activeId}
+                />
+              </Box>
+            )}
 
             <Group p="md" gap="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
               <TextInput

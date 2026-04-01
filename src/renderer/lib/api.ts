@@ -170,8 +170,23 @@ export async function* sendMessage(
 export type SseEvent =
   | { type: 'message-ids'; userMessageId: string; assistantMessageId: string }
   | { type: 'text-delta'; text: string }
+  | { type: 'tool-call'; toolCallId: string; toolName: string; args: Record<string, unknown>; appSlug: string; appId: string; appEntryUrl: string; rendersUi: boolean }
+  | { type: 'tool-result'; toolCallId: string; toolName: string; result: unknown }
   | { type: 'done'; usage: { inputTokens: number; outputTokens: number } }
   | { type: 'error'; error: string }
+
+export async function submitToolResult(
+  token: string,
+  conversationId: string,
+  toolCallId: string,
+  result: unknown,
+): Promise<void> {
+  await ofetch(`/api/conversations/${conversationId}/tool-result/${toolCallId}`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: { result },
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Apps
