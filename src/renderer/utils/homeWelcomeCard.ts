@@ -1,4 +1,4 @@
-export type WelcomeCardMode = 'guide' | 'copilots' | null
+export type WelcomeCardMode = 'guide' | 'copilots' | 'none' | 'no-license' | null
 
 export function getHomeWelcomeCardMode(_params: {
   providerCount: number
