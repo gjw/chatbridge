@@ -14,6 +14,7 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as ServerChatImport } from './routes/server-chat'
 import { Route as RegisterImport } from './routes/register'
 import { Route as AdminAppsImport } from './routes/admin/apps'
+import { Route as AdminSafetyImport } from './routes/admin/safety'
 import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
 import { Route as SettingsRouteImport } from './routes/settings/route'
@@ -59,6 +60,12 @@ const ServerChatRoute = ServerChatImport.update({
 const AdminAppsRoute = AdminAppsImport.update({
   id: '/admin/apps',
   path: '/admin/apps',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AdminSafetyRoute = AdminSafetyImport.update({
+  id: '/admin/safety',
+  path: '/admin/safety',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -334,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/apps'
       fullPath: '/admin/apps'
       preLoaderRoute: typeof AdminAppsImport
+      parentRoute: typeof rootRoute
+    }
+    '/admin/safety': {
+      id: '/admin/safety'
+      path: '/admin/safety'
+      fullPath: '/admin/safety'
+      preLoaderRoute: typeof AdminSafetyImport
       parentRoute: typeof rootRoute
     }
     '/settings/provider': {
@@ -843,6 +857,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ServerChatRoute: typeof ServerChatRoute
   AdminAppsRoute: typeof AdminAppsRoute
+  AdminSafetyRoute: typeof AdminSafetyRoute
   SessionSessionIdRoute: typeof SessionSessionIdRoute
   TaskTaskIdRoute: typeof TaskTaskIdRoute
   GuideIndexRoute: typeof GuideIndexRoute
@@ -859,6 +874,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ServerChatRoute: ServerChatRoute,
   AdminAppsRoute: AdminAppsRoute,
+  AdminSafetyRoute: AdminSafetyRoute,
   SessionSessionIdRoute: SessionSessionIdRoute,
   TaskTaskIdRoute: TaskTaskIdRoute,
   GuideIndexRoute: GuideIndexRoute,
@@ -884,6 +900,7 @@ export const routeTree = rootRoute
         "/register",
         "/server-chat",
         "/admin/apps",
+        "/admin/safety",
         "/session/$sessionId",
         "/task/$taskId",
         "/guide/",

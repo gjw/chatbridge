@@ -303,3 +303,58 @@ export async function proxyApiRequest(
   })
   return ProxyResponseSchema.parse(raw)
 }
+
+// ---------------------------------------------------------------------------
+// Safety / Content Filter
+// ---------------------------------------------------------------------------
+
+const FilterLogEntrySchema = z.object({
+  id: z.string(),
+  user_id: z.string().nullable(),
+  conversation_id: z.string().nullable(),
+  content: z.string(),
+  matched_words: z.array(z.string()),
+  severity: z.enum(['low', 'medium', 'critical']),
+  source: z.enum(['llm_output', 'tool_result', 'user_input']),
+  action_taken: z.enum(['redacted', 'blocked', 'logged']),
+  created_at: z.string(),
+})
+export type FilterLogEntry = z.infer<typeof FilterLogEntrySchema>
+
+const BlocklistWordSchema = z.object({
+  word: z.string(),
+  severity: z.enum(['low', 'medium', 'critical']),
+})
+export type BlocklistWord = z.infer<typeof BlocklistWordSchema>
+
+export async function getFilterLog(
+  token: string,
+  opts?: { limit?: number; offset?: number; severity?: string },
+) {
+  const params = new URLSearchParams()
+  if (opts?.limit) params.set('limit', String(opts.limit))
+  if (opts?.offset) params.set('offset', String(opts.offset))
+  if (opts?.severity) params.set('severity', opts.severity)
+  const qs = params.toString()
+
+  const raw = await ofetch(`/api/safety/log${qs ? `?${qs}` : ''}`, {
+    headers: authHeaders(token),
+  })
+  return z.array(FilterLogEntrySchema).parse(raw)
+}
+
+export async function getBlocklist(token: string) {
+  const raw = await ofetch('/api/safety/blocklist', {
+    headers: authHeaders(token),
+  }) as { words: unknown[] }
+  return z.array(BlocklistWordSchema).parse(raw.words)
+}
+
+export async function updateBlocklist(token: string, words: BlocklistWord[]) {
+  const raw = await ofetch('/api/safety/blocklist', {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: { words },
+  })
+  return raw as { count: number }
+}
