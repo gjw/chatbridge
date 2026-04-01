@@ -13,6 +13,7 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as ServerChatImport } from './routes/server-chat'
 import { Route as RegisterImport } from './routes/register'
+import { Route as AdminAppsImport } from './routes/admin/apps'
 import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
 import { Route as SettingsRouteImport } from './routes/settings/route'
@@ -52,6 +53,12 @@ import { Route as SettingsProviderChatboxAiIndexImport } from './routes/settings
 const ServerChatRoute = ServerChatImport.update({
   id: '/server-chat',
   path: '/server-chat',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AdminAppsRoute = AdminAppsImport.update({
+  id: '/admin/apps',
+  path: '/admin/apps',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -320,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/server-chat'
       fullPath: '/server-chat'
       preLoaderRoute: typeof ServerChatImport
+      parentRoute: typeof rootRoute
+    }
+    '/admin/apps': {
+      id: '/admin/apps'
+      path: '/admin/apps'
+      fullPath: '/admin/apps'
+      preLoaderRoute: typeof AdminAppsImport
       parentRoute: typeof rootRoute
     }
     '/settings/provider': {
@@ -828,6 +842,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   ServerChatRoute: typeof ServerChatRoute
+  AdminAppsRoute: typeof AdminAppsRoute
   SessionSessionIdRoute: typeof SessionSessionIdRoute
   TaskTaskIdRoute: typeof TaskTaskIdRoute
   GuideIndexRoute: typeof GuideIndexRoute
@@ -843,6 +858,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   ServerChatRoute: ServerChatRoute,
+  AdminAppsRoute: AdminAppsRoute,
   SessionSessionIdRoute: SessionSessionIdRoute,
   TaskTaskIdRoute: TaskTaskIdRoute,
   GuideIndexRoute: GuideIndexRoute,
@@ -867,6 +883,7 @@ export const routeTree = rootRoute
         "/login",
         "/register",
         "/server-chat",
+        "/admin/apps",
         "/session/$sessionId",
         "/task/$taskId",
         "/guide/",

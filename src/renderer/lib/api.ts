@@ -172,3 +172,94 @@ export type SseEvent =
   | { type: 'text-delta'; text: string }
   | { type: 'done'; usage: { inputTokens: number; outputTokens: number } }
   | { type: 'error'; error: string }
+
+// ---------------------------------------------------------------------------
+// Apps
+// ---------------------------------------------------------------------------
+
+const AppSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  manifest: z.unknown(),
+  status: z.enum(['pending', 'approved', 'blocked']),
+  trust_tier: z.enum(['internal', 'external_public', 'external_auth']),
+  created_by: z.string().nullable(),
+  approved_by: z.string().nullable(),
+  created_at: z.string(),
+})
+export type App = z.infer<typeof AppSchema>
+
+const AppWithInstallSchema = AppSchema.extend({
+  installed: z.boolean().optional(),
+})
+export type AppWithInstall = z.infer<typeof AppWithInstallSchema>
+
+const AppInstallationSchema = z.object({
+  id: z.string(),
+  app_id: z.string(),
+  user_id: z.string(),
+  enabled: z.boolean(),
+  created_at: z.string(),
+})
+
+const EnabledAppSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  tools: z.array(z.unknown()),
+})
+export type EnabledApp = z.infer<typeof EnabledAppSchema>
+
+export async function registerApp(token: string, manifest: unknown) {
+  const raw = await ofetch('/api/apps', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: manifest as Record<string, unknown>,
+  })
+  return AppSchema.parse(raw)
+}
+
+export async function listApps(token: string) {
+  const raw = await ofetch('/api/apps', {
+    headers: authHeaders(token),
+  })
+  return z.array(AppSchema).parse(raw)
+}
+
+export async function getApp(token: string, id: string) {
+  const raw = await ofetch(`/api/apps/${id}`, {
+    headers: authHeaders(token),
+  })
+  return AppWithInstallSchema.parse(raw)
+}
+
+export async function updateAppStatus(token: string, id: string, status: 'approved' | 'blocked') {
+  const raw = await ofetch(`/api/apps/${id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: { status },
+  })
+  return AppSchema.parse(raw)
+}
+
+export async function installApp(token: string, id: string) {
+  const raw = await ofetch(`/api/apps/${id}/install`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+  return AppInstallationSchema.parse(raw)
+}
+
+export async function uninstallApp(token: string, id: string) {
+  await ofetch(`/api/apps/${id}/install`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+}
+
+export async function getEnabledApps(token: string) {
+  const raw = await ofetch('/api/apps/enabled', {
+    headers: authHeaders(token),
+  })
+  return z.array(EnabledAppSchema).parse(raw)
+}
