@@ -1,4 +1,5 @@
 import { type RemoteConfig, Theme } from '@shared/types'
+import { redirect } from '@tanstack/react-router'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import Toasts from '@/components/common/Toasts'
 import ExitFullscreenButton from '@/components/layout/ExitFullscreenButton'
@@ -60,6 +61,7 @@ import { useSession } from '@/stores/chatStore'
 import { initOnboardingStore, onboardingStore } from '@/stores/onboardingStore'
 import * as premiumActions from '@/stores/premiumActions'
 import * as settingActions from '@/stores/settingActions'
+import { authInfoStore } from '@/stores/authInfoStore'
 import { initSettingsStore, settingsStore, useLanguage, useSettingsStore, useTheme } from '@/stores/settingsStore'
 import { useUIStore } from '@/stores/uiStore'
 import { CHATBOX_BUILD_CHANNEL, CHATBOX_BUILD_PLATFORM } from '@/variables'
@@ -570,10 +572,21 @@ const creteMantineTheme = (scale = 1) =>
     },
   })
 
+const PUBLIC_PATHS = ['/login', '/register']
+
 export const Route = createRootRoute({
   validateSearch: (search: Record<string, unknown>): { settings?: string } => ({
     settings: typeof search.settings === 'string' ? search.settings : undefined,
   }),
+  beforeLoad: ({ location }) => {
+    const isPublic = PUBLIC_PATHS.some((p) => location.pathname === p)
+    if (isPublic) return
+
+    const token = authInfoStore.getState().accessToken
+    if (!token) {
+      throw redirect({ to: '/login' })
+    }
+  },
   component: () => {
     useI18nEffect()
     premiumActions.useAutoValidate() // 每次启动都执行 license 检查，防止用户在lemonsqueezy管理页面中取消了当前设备的激活

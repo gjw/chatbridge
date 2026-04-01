@@ -11,6 +11,8 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as RegisterImport } from './routes/register'
+import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
 import { Route as SettingsRouteImport } from './routes/settings/route'
 import { Route as DevRouteImport } from './routes/dev/route'
@@ -45,6 +47,18 @@ import { Route as SettingsProviderProviderIdImport } from './routes/settings/pro
 import { Route as SettingsProviderChatboxAiIndexImport } from './routes/settings/provider/chatbox-ai/index'
 
 // Create/Update Routes
+
+const RegisterRoute = RegisterImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const LoginRoute = LoginImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const AboutRoute = AboutImport.update({
   id: '/about',
@@ -278,6 +292,20 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutImport
+      parentRoute: typeof rootRoute
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginImport
+      parentRoute: typeof rootRoute
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterImport
       parentRoute: typeof rootRoute
     }
     '/settings/provider': {
@@ -567,6 +595,8 @@ export interface FileRoutesByFullPath {
   '/dev': typeof DevRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
@@ -599,6 +629,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
   '/copilots/search': typeof CopilotsSearchRoute
@@ -634,6 +666,8 @@ export interface FileRoutesById {
   '/dev': typeof DevRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
@@ -671,6 +705,8 @@ export interface FileRouteTypes {
     | '/dev'
     | '/settings'
     | '/about'
+    | '/login'
+    | '/register'
     | '/settings/provider'
     | '/copilots/featured'
     | '/copilots/my'
@@ -702,6 +738,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/login'
+    | '/register'
     | '/copilots/featured'
     | '/copilots/my'
     | '/copilots/search'
@@ -735,6 +773,8 @@ export interface FileRouteTypes {
     | '/dev'
     | '/settings'
     | '/about'
+    | '/login'
+    | '/register'
     | '/settings/provider'
     | '/copilots/featured'
     | '/copilots/my'
@@ -771,6 +811,8 @@ export interface RootRouteChildren {
   DevRouteRoute: typeof DevRouteRouteWithChildren
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   SessionSessionIdRoute: typeof SessionSessionIdRoute
   TaskTaskIdRoute: typeof TaskTaskIdRoute
   GuideIndexRoute: typeof GuideIndexRoute
@@ -783,6 +825,8 @@ const rootRouteChildren: RootRouteChildren = {
   DevRouteRoute: DevRouteRouteWithChildren,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   AboutRoute: AboutRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   SessionSessionIdRoute: SessionSessionIdRoute,
   TaskTaskIdRoute: TaskTaskIdRoute,
   GuideIndexRoute: GuideIndexRoute,
@@ -804,6 +848,8 @@ export const routeTree = rootRoute
         "/dev",
         "/settings",
         "/about",
+        "/login",
+        "/register",
         "/session/$sessionId",
         "/task/$taskId",
         "/guide/",
@@ -850,6 +896,12 @@ export const routeTree = rootRoute
     },
     "/about": {
       "filePath": "about.tsx"
+    },
+    "/login": {
+      "filePath": "login.tsx"
+    },
+    "/register": {
+      "filePath": "register.tsx"
     },
     "/settings/provider": {
       "filePath": "settings/provider/route.tsx",

@@ -3,20 +3,33 @@ import { persist, subscribeWithSelector } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { AuthTokens } from '../routes/settings/provider/chatbox-ai/-components/types'
 
+export interface PlatformUser {
+  id: string
+  email: string
+  name: string
+  role: 'student' | 'teacher' | 'admin'
+}
+
 interface AuthTokensState {
   accessToken: string | null
   refreshToken: string | null
+  user: PlatformUser | null
 }
 
 interface AuthTokensActions {
   setTokens: (tokens: AuthTokens) => void
   clearTokens: () => void
   getTokens: () => AuthTokens | null
+  setUser: (user: PlatformUser) => void
+  clearUser: () => void
+  loginComplete: (tokens: AuthTokens, user: PlatformUser) => void
+  logout: () => void
 }
 
 const initialState: AuthTokensState = {
   accessToken: null,
   refreshToken: null,
+  user: null,
 }
 
 export const authInfoStore = createStore<AuthTokensState & AuthTokensActions>()(
@@ -49,13 +62,42 @@ export const authInfoStore = createStore<AuthTokensState & AuthTokensActions>()(
           }
           return null
         },
+
+        setUser: (user: PlatformUser) => {
+          set((state) => {
+            state.user = user
+          })
+        },
+
+        clearUser: () => {
+          set((state) => {
+            state.user = null
+          })
+        },
+
+        loginComplete: (tokens: AuthTokens, user: PlatformUser) => {
+          set((state) => {
+            state.accessToken = tokens.accessToken
+            state.refreshToken = tokens.refreshToken
+            state.user = user
+          })
+        },
+
+        logout: () => {
+          set((state) => {
+            state.accessToken = null
+            state.refreshToken = null
+            state.user = null
+          })
+        },
       })),
       {
-        name: 'chatbox-ai-auth-info',
-        version: 0,
+        name: 'chatbridge-auth',
+        version: 1,
         partialize: (state) => ({
           accessToken: state.accessToken,
           refreshToken: state.refreshToken,
+          user: state.user,
         }),
       }
     )
@@ -74,4 +116,12 @@ export const useAuthTokens = () => {
     clearTokens: state.clearTokens,
     getTokens: state.getTokens,
   }))
+}
+
+export const useCurrentUser = () => {
+  return useAuthInfoStore((state) => state.user)
+}
+
+export const useIsAuthenticated = () => {
+  return useAuthInfoStore((state) => state.accessToken !== null)
 }
