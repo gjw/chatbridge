@@ -54,3 +54,121 @@ export async function getMe(accessToken: string) {
   })
   return MeResponseSchema.parse(raw)
 }
+
+// ---------------------------------------------------------------------------
+// Conversations
+// ---------------------------------------------------------------------------
+
+const ConversationSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  title: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+export type Conversation = z.infer<typeof ConversationSchema>
+
+const MessageSchema = z.object({
+  id: z.string(),
+  conversation_id: z.string(),
+  role: z.enum(['user', 'assistant', 'system', 'tool']),
+  content: z.unknown(),
+  model: z.string().nullable(),
+  token_usage: z.unknown().nullable(),
+  created_at: z.string(),
+})
+export type ApiMessage = z.infer<typeof MessageSchema>
+
+const ConversationWithMessagesSchema = ConversationSchema.extend({
+  messages: z.array(MessageSchema),
+})
+export type ConversationWithMessages = z.infer<typeof ConversationWithMessagesSchema>
+
+function authHeaders(token: string) {
+  return { Authorization: `Bearer ${token}` }
+}
+
+export async function createConversation(token: string, title?: string) {
+  const raw = await ofetch('/api/conversations', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: title ? { title } : {},
+  })
+  return ConversationSchema.parse(raw)
+}
+
+export async function listConversations(token: string) {
+  const raw = await ofetch('/api/conversations', {
+    headers: authHeaders(token),
+  })
+  return z.array(ConversationSchema).parse(raw)
+}
+
+export async function getConversation(token: string, id: string) {
+  const raw = await ofetch(`/api/conversations/${id}`, {
+    headers: authHeaders(token),
+  })
+  return ConversationWithMessagesSchema.parse(raw)
+}
+
+export async function deleteConversation(token: string, id: string) {
+  await ofetch(`/api/conversations/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+}
+
+/**
+ * Send a message and return an SSE event source.
+ * Yields parsed SSE data objects as they arrive.
+ */
+export async function* sendMessage(
+  token: string,
+  conversationId: string,
+  content: string,
+  signal?: AbortSignal,
+): AsyncGenerator<SseEvent> {
+  const response = await fetch(`/api/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(token),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ content }),
+    signal,
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Send message failed: ${response.status} ${text}`)
+  }
+
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('No response body')
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    // Keep the last potentially incomplete line in the buffer
+    buffer = lines.pop() ?? ''
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data: unknown = JSON.parse(line.slice(6))
+        yield data as SseEvent
+      }
+    }
+  }
+}
+
+export type SseEvent =
+  | { type: 'message-ids'; userMessageId: string; assistantMessageId: string }
+  | { type: 'text-delta'; text: string }
+  | { type: 'done'; usage: { inputTokens: number; outputTokens: number } }
+  | { type: 'error'; error: string }

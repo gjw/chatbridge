@@ -11,6 +11,7 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as ServerChatImport } from './routes/server-chat'
 import { Route as RegisterImport } from './routes/register'
 import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
@@ -47,6 +48,12 @@ import { Route as SettingsProviderProviderIdImport } from './routes/settings/pro
 import { Route as SettingsProviderChatboxAiIndexImport } from './routes/settings/provider/chatbox-ai/index'
 
 // Create/Update Routes
+
+const ServerChatRoute = ServerChatImport.update({
+  id: '/server-chat',
+  path: '/server-chat',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const RegisterRoute = RegisterImport.update({
   id: '/register',
@@ -306,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterImport
+      parentRoute: typeof rootRoute
+    }
+    '/server-chat': {
+      id: '/server-chat'
+      path: '/server-chat'
+      fullPath: '/server-chat'
+      preLoaderRoute: typeof ServerChatImport
       parentRoute: typeof rootRoute
     }
     '/settings/provider': {
@@ -813,6 +827,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  ServerChatRoute: typeof ServerChatRoute
   SessionSessionIdRoute: typeof SessionSessionIdRoute
   TaskTaskIdRoute: typeof TaskTaskIdRoute
   GuideIndexRoute: typeof GuideIndexRoute
@@ -827,6 +842,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  ServerChatRoute: ServerChatRoute,
   SessionSessionIdRoute: SessionSessionIdRoute,
   TaskTaskIdRoute: TaskTaskIdRoute,
   GuideIndexRoute: GuideIndexRoute,
@@ -850,6 +866,7 @@ export const routeTree = rootRoute
         "/about",
         "/login",
         "/register",
+        "/server-chat",
         "/session/$sessionId",
         "/task/$taskId",
         "/guide/",
@@ -902,6 +919,9 @@ export const routeTree = rootRoute
     },
     "/register": {
       "filePath": "register.tsx"
+    },
+    "/server-chat": {
+      "filePath": "server-chat.tsx"
     },
     "/settings/provider": {
       "filePath": "settings/provider/route.tsx",
