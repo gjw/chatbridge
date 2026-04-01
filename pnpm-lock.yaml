@@ -197,6 +197,9 @@ importers:
       '@types/react-syntax-highlighter':
         specifier: ^15.5.9
         version: 15.5.13
+      '@types/shell-quote':
+        specifier: ^1.7.5
+        version: 1.7.5
       '@types/store':
         specifier: ^2.0.2
         version: 2.0.5
@@ -3146,6 +3149,9 @@ packages:
 
   '@types/react@18.3.28':
     resolution: {integrity: sha512-z9VXpC7MWrhfWipitjNdgCauoMLRdIILQsAEV+ZesIzBq/oUlxk0m3ApZuMFCXdnS4U7KrI+l3WRUEGQ8K1QKw==}
+
+  '@types/shell-quote@1.7.5':
+    resolution: {integrity: sha512-+UE8GAGRPbJVQDdxi16dgadcBfQ+KG2vgZhV1+3A1XmHbmwcdwhCUwIdy+d3pAGrbvgRoVSjeI9vOWyq376Yzw==}
 
   '@types/statuses@2.0.6':
     resolution: {integrity: sha512-xMAgYwceFhRA2zY+XbEA7mxYbA093wdiW8Vu6gZPGWy9cmOyU9XesH1tNcEWsKFd5Vzrqx5T3D38PWx1FIIXkA==}
@@ -10030,6 +10036,8 @@ snapshots:
     dependencies:
       '@types/prop-types': 15.7.15
       csstype: 3.2.3
+
+  '@types/shell-quote@1.7.5': {}
 
   '@types/statuses@2.0.6': {}
 

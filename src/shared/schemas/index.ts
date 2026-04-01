@@ -1,0 +1,43 @@
+// App manifest schemas and types
+export {
+  TrustTierSchema,
+  AppPermissionSchema,
+  JsonSchemaSchema,
+  AppToolDefSchema,
+  AppAuthConfigSchema,
+  AppManifestSchema,
+  type TrustTier,
+  type AppPermission,
+  type JsonSchema,
+  type AppToolDef,
+  type AppAuthConfig,
+  type AppManifest,
+} from '../types/app'
+
+// Bridge protocol schemas and types
+export {
+  BridgeInitSchema,
+  BridgeToolInvokeSchema,
+  BridgeDestroySchema,
+  BridgeReadySchema,
+  BridgeToolResultSchema,
+  BridgeToolErrorSchema,
+  BridgeUiResizeSchema,
+  BridgeApiRequestSchema,
+  BridgeApiResponseSchema,
+  PlatformToAppMessageSchema,
+  AppToPlatformMessageSchema,
+  BridgeMessageSchema,
+  type BridgeInit,
+  type BridgeToolInvoke,
+  type BridgeDestroy,
+  type BridgeReady,
+  type BridgeToolResult,
+  type BridgeToolError,
+  type BridgeUiResize,
+  type BridgeApiRequest,
+  type BridgeApiResponse,
+  type PlatformToAppMessage,
+  type AppToPlatformMessage,
+  type BridgeMessage,
+} from '../types/bridge'

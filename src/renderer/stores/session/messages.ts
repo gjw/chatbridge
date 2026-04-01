@@ -143,7 +143,7 @@ export async function submitNewUserMessage(
 
   const globalSettings = settingsStore.getState().getSettings()
   const isPro = settingActions.isPro()
-  const remoteConfig = settingActions.getRemoteConfig()
+  const remoteConfig = settingActions.getRemoteConfig() as Partial<Record<string, unknown>>
 
   // 根据需要，插入空白的回复消息
   let newAssistantMsg = createMessage('assistant', '')

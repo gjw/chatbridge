@@ -19,6 +19,8 @@ interface Options {
   injectDefaultMetadata: boolean
   useProxy: boolean
   stream?: boolean
+  customFetch?: typeof globalThis.fetch
+  listModelsFallback?: ProviderModelInfo[]
 }
 
 export default class OpenAI extends AbstractAISDKModel {

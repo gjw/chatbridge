@@ -58,7 +58,7 @@ export function RouteComponent() {
                     file,
                     key,
                     () => setSettings({ userAvatarKey: key }),
-                    (k, v) => storage.setBlob(k, v)
+                    (k: string, v: string) => storage.setBlob(k, v)
                   )
                 }
               }}
@@ -97,7 +97,7 @@ export function RouteComponent() {
                     file,
                     key,
                     () => setSettings({ defaultAssistantAvatarKey: key }),
-                    (k, v) => storage.setBlob(k, v)
+                    (k: string, v: string) => storage.setBlob(k, v)
                   )
                 }
               }}
@@ -228,7 +228,7 @@ export function RouteComponent() {
                       file,
                       key,
                       () => setSettings({ backgroundImageKey: key }),
-                      (k, v) => storage.setBlob(k, v)
+                      (k: string, v: string) => storage.setBlob(k, v)
                     )
                   }
                 }}

@@ -158,7 +158,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
 
     return {
       name: file.name,
-      path: file.path,
+      path: file.path ?? file.name,
       type: mimeType,
       size: file.size,
     }

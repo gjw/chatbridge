@@ -15,3 +15,9 @@ export function useTaskSessionStore<T>(selector: (state: ReturnType<typeof taskS
 export async function getTaskSession(_id: string) {
   return null
 }
+
+export const TASK_SESSION_QUERY_KEY = 'task-session'
+
+export async function updateTaskSession(_id: string, _data: Record<string, unknown>) {
+  return null
+}

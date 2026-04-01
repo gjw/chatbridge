@@ -9,6 +9,7 @@ export default function SegmentedControl({
   value: string
   onChange: (value: string) => void
   data: { label: string; value: string }[]
+  fullWidth?: boolean
 }) {
   return (
     <MantineSegmentedControl

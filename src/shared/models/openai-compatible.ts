@@ -116,7 +116,7 @@ interface ListModelsResponse {
 }
 
 export async function fetchRemoteModels(
-  params: { apiHost: string; apiKey: string; useProxy?: boolean },
+  params: { apiHost: string; apiKey: string; useProxy?: boolean; customFetch?: typeof globalThis.fetch },
   dependencies: ModelDependencies
 ) {
   const response = await dependencies.request.apiRequest({

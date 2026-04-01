@@ -56,13 +56,18 @@ export function Img(props: {
   return <img src={props.src} className={`max-w-full max-h-full ${props.className || ''}`} onClick={props.onClick} />
 }
 
-export function handleImageInputAndSave(file: File, key: string, updateKey?: (key: string) => void) {
+export function handleImageInputAndSave(
+  file: File,
+  key: string,
+  updateKey?: (key: string) => void,
+  saveBlob?: (key: string, value: string) => Promise<void>
+) {
   if (file.type.startsWith('image/')) {
     const reader = new FileReader()
     reader.onload = async (e) => {
       if (e.target && e.target.result) {
         const base64 = e.target.result as string
-        await storage.setBlob(key, base64)
+        await (saveBlob ?? storage.setBlob.bind(storage))(key, base64)
         if (updateKey) {
           updateKey(key)
         }
