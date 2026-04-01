@@ -8,6 +8,7 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(32).default('dev-secret-change-me-in-production-32chars'),
   JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
   JWT_REFRESH_EXPIRES_IN: z.coerce.number().int().positive().default(604800),
+  OPENAI_API_KEY: z.string().min(1).default(''),
 })
 
 export const env = EnvSchema.parse(process.env)
