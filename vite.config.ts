@@ -108,6 +108,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 1212,
       strictPort: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3100',
+          changeOrigin: true,
+        },
+      },
     },
     define: {
       'process.type': '"renderer"',

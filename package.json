@@ -16,6 +16,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "dev:server": "pnpm --filter @chatbridge/server dev",
+    "build:server": "pnpm --filter @chatbridge/server build",
+    "typecheck:server": "pnpm --filter @chatbridge/server typecheck",
+    "seed": "pnpm --filter @chatbridge/server seed",
+    "db:up": "docker compose -f docker/docker-compose.yml up -d",
+    "db:down": "docker compose -f docker/docker-compose.yml down",
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",
     "format": "biome format --write"

@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chatbridge-db
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: chatbridge
+      POSTGRES_PASSWORD: chatbridge
+      POSTGRES_DB: chatbridge
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../server/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatbridge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
