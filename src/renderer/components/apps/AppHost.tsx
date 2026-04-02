@@ -263,7 +263,7 @@ export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
       <iframe
         ref={iframeRef}
         src={entryUrl}
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
         referrerPolicy="no-referrer"
         loading="lazy"
         onLoad={handleIframeLoad}
