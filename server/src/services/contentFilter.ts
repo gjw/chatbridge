@@ -225,7 +225,6 @@ export async function classifyContent(text: string): Promise<{
       model: openai('gpt-4o-mini'),
       system: TIER2_PROMPT,
       prompt: text,
-      maxTokens: 50,
     })
 
     const response = result.text.trim()
