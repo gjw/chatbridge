@@ -89,6 +89,8 @@ function FilterLogSection({ accessToken }: { accessToken: string }) {
 
   useEffect(() => {
     void loadEntries()
+    const interval = setInterval(() => void loadEntries(), 5000)
+    return () => clearInterval(interval)
   }, [loadEntries])
 
   return (
