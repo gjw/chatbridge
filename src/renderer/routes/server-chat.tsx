@@ -345,7 +345,7 @@ function ServerChatPage() {
             {activeToolCall?.rendersUi && (
               <Box
                 p="sm"
-                style={{ borderTop: '1px solid var(--mantine-color-default-border)', maxHeight: 400 }}
+                style={{ borderTop: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
               >
                 <Text size="xs" c="dimmed" mb={4}>
                   App: {activeToolCall.appSlug}
