@@ -335,6 +335,7 @@ export async function proxyApiRequest(
 const FilterLogEntrySchema = z.object({
   id: z.string(),
   user_id: z.string().nullable(),
+  user_name: z.string().nullable().optional(),
   conversation_id: z.string().nullable(),
   content: z.string(),
   matched_words: z.array(z.string()),

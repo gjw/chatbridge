@@ -22,21 +22,21 @@ router.get('/log', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
     const { limit, offset, severity } = LogQuerySchema.parse(req.query)
 
-    let sql = `SELECT * FROM content_filter_log`
+    let sql = `SELECT cl.*, u.name as user_name FROM content_filter_log cl LEFT JOIN users u ON cl.user_id = u.id`
     const params: unknown[] = []
 
     if (severity) {
       params.push(severity)
-      sql += ` WHERE severity = $${String(params.length)}`
+      sql += ` WHERE cl.severity = $${String(params.length)}`
     }
 
-    sql += ` ORDER BY created_at DESC`
+    sql += ` ORDER BY cl.created_at DESC`
     params.push(limit)
     sql += ` LIMIT $${String(params.length)}`
     params.push(offset)
     sql += ` OFFSET $${String(params.length)}`
 
-    const rows = await queryRows(ContentFilterLogRowSchema, sql, params)
+    const rows = await queryRows(ContentFilterLogRowSchema.extend({ user_name: z.string().nullable() }), sql, params)
     res.json(rows)
   } catch (err) {
     next(err)

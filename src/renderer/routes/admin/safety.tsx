@@ -130,6 +130,7 @@ function FilterLogSection({ accessToken }: { accessToken: string }) {
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Time</Table.Th>
+              <Table.Th>Student</Table.Th>
               <Table.Th>Severity</Table.Th>
               <Table.Th>Source</Table.Th>
               <Table.Th>Matched Words</Table.Th>
@@ -153,6 +154,13 @@ function FilterLogSection({ accessToken }: { accessToken: string }) {
                   </Text>
                 </Table.Td>
                 <Table.Td>
+                  {entry.user_name ? (
+                    <Text size="xs" fw={500}>{entry.user_name}</Text>
+                  ) : (
+                    <Text size="xs" c="dimmed">System</Text>
+                  )}
+                </Table.Td>
+                <Table.Td>
                   <SeverityBadge severity={entry.severity} />
                 </Table.Td>
                 <Table.Td>
@@ -170,9 +178,22 @@ function FilterLogSection({ accessToken }: { accessToken: string }) {
                   </Group>
                 </Table.Td>
                 <Table.Td maw={300}>
-                  <Text size="xs" truncate>
-                    {entry.content}
-                  </Text>
+                  {entry.conversation_id ? (
+                    <Tooltip label="View conversation">
+                      <Text
+                        size="xs"
+                        truncate
+                        style={{ cursor: 'pointer', textDecoration: 'underline dotted' }}
+                        onClick={() => window.open(`/server-chat?conv=${entry.conversation_id}`, '_blank')}
+                      >
+                        {entry.content}
+                      </Text>
+                    </Tooltip>
+                  ) : (
+                    <Text size="xs" truncate>
+                      {entry.content}
+                    </Text>
+                  )}
                 </Table.Td>
                 <Table.Td>
                   <Badge variant="dot" size="xs">
