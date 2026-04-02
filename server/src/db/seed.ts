@@ -86,7 +86,7 @@ async function seed(): Promise<void> {
   // --- App Installations ---
   const installPairs = [
     [chessId, adminId], [chessId, teacherId], [chessId, studentId],
-    [wordleId, adminId], [wordleId, teacherId],
+    [wordleId, adminId], [wordleId, teacherId], [wordleId, studentId],
   ]
   for (const [appId, userId] of installPairs) {
     await pool.query(
@@ -96,7 +96,7 @@ async function seed(): Promise<void> {
       [appId, userId],
     )
   }
-  console.info('  Installations: chess for all, wordle for admin+teacher')
+  console.info('  Installations: chess for all, wordle for all')
 
   // --- Sample Conversation ---
   const convResult = await pool.query(

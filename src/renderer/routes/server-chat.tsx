@@ -340,7 +340,7 @@ function ServerChatPage() {
             </ScrollArea>
 
             {/* App iframe (shown when a tool call is active with rendersUi) */}
-            {activeToolCall?.rendersUi && activeToolCall.status === 'invoking' && (
+            {activeToolCall?.rendersUi && (
               <Box
                 p="sm"
                 style={{ borderTop: '1px solid var(--mantine-color-default-border)', maxHeight: 400 }}
