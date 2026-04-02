@@ -1,5 +1,25 @@
 import { z } from 'zod'
-import { ofetch } from 'ofetch'
+import { ofetch, type FetchOptions } from 'ofetch'
+import { authInfoStore } from '@/stores/authInfoStore'
+
+/** Wrap ofetch to handle 401 by logging out and redirecting to /login */
+async function authedFetch<T>(url: string, opts: FetchOptions): Promise<T> {
+  try {
+    return await ofetch<T>(url, opts)
+  } catch (err: unknown) {
+    if (
+      err != null &&
+      typeof err === 'object' &&
+      'status' in err &&
+      (err as { status: number }).status === 401 &&
+      !url.includes('/auth/')
+    ) {
+      authInfoStore.getState().logout()
+      window.location.href = '/login'
+    }
+    throw err
+  }
+}
 
 const UserSchema = z.object({
   id: z.string(),
@@ -89,7 +109,7 @@ function authHeaders(token: string) {
 }
 
 export async function createConversation(token: string, title?: string) {
-  const raw = await ofetch('/api/conversations', {
+  const raw = await authedFetch('/api/conversations', {
     method: 'POST',
     headers: authHeaders(token),
     body: title ? { title } : {},
@@ -98,21 +118,21 @@ export async function createConversation(token: string, title?: string) {
 }
 
 export async function listConversations(token: string) {
-  const raw = await ofetch('/api/conversations', {
+  const raw = await authedFetch('/api/conversations', {
     headers: authHeaders(token),
   })
   return z.array(ConversationSchema).parse(raw)
 }
 
 export async function getConversation(token: string, id: string) {
-  const raw = await ofetch(`/api/conversations/${id}`, {
+  const raw = await authedFetch(`/api/conversations/${id}`, {
     headers: authHeaders(token),
   })
   return ConversationWithMessagesSchema.parse(raw)
 }
 
 export async function deleteConversation(token: string, id: string) {
-  await ofetch(`/api/conversations/${id}`, {
+  await authedFetch(`/api/conversations/${id}`, {
     method: 'DELETE',
     headers: authHeaders(token),
   })
@@ -139,6 +159,10 @@ export async function* sendMessage(
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      authInfoStore.getState().logout()
+      window.location.href = '/login'
+    }
     const text = await response.text()
     throw new Error(`Send message failed: ${response.status} ${text}`)
   }
@@ -181,7 +205,7 @@ export async function submitToolResult(
   toolCallId: string,
   result: unknown,
 ): Promise<void> {
-  await ofetch(`/api/conversations/${conversationId}/tool-result/${toolCallId}`, {
+  await authedFetch(`/api/conversations/${conversationId}/tool-result/${toolCallId}`, {
     method: 'POST',
     headers: authHeaders(token),
     body: { result },
@@ -226,7 +250,7 @@ const EnabledAppSchema = z.object({
 export type EnabledApp = z.infer<typeof EnabledAppSchema>
 
 export async function registerApp(token: string, manifest: unknown) {
-  const raw = await ofetch('/api/apps', {
+  const raw = await authedFetch('/api/apps', {
     method: 'POST',
     headers: authHeaders(token),
     body: manifest as Record<string, unknown>,
@@ -235,21 +259,21 @@ export async function registerApp(token: string, manifest: unknown) {
 }
 
 export async function listApps(token: string) {
-  const raw = await ofetch('/api/apps', {
+  const raw = await authedFetch('/api/apps', {
     headers: authHeaders(token),
   })
   return z.array(AppSchema).parse(raw)
 }
 
 export async function getApp(token: string, id: string) {
-  const raw = await ofetch(`/api/apps/${id}`, {
+  const raw = await authedFetch(`/api/apps/${id}`, {
     headers: authHeaders(token),
   })
   return AppWithInstallSchema.parse(raw)
 }
 
 export async function updateAppStatus(token: string, id: string, status: 'approved' | 'blocked') {
-  const raw = await ofetch(`/api/apps/${id}/status`, {
+  const raw = await authedFetch(`/api/apps/${id}/status`, {
     method: 'PATCH',
     headers: authHeaders(token),
     body: { status },
@@ -258,7 +282,7 @@ export async function updateAppStatus(token: string, id: string, status: 'approv
 }
 
 export async function installApp(token: string, id: string) {
-  const raw = await ofetch(`/api/apps/${id}/install`, {
+  const raw = await authedFetch(`/api/apps/${id}/install`, {
     method: 'POST',
     headers: authHeaders(token),
   })
@@ -266,14 +290,14 @@ export async function installApp(token: string, id: string) {
 }
 
 export async function uninstallApp(token: string, id: string) {
-  await ofetch(`/api/apps/${id}/install`, {
+  await authedFetch(`/api/apps/${id}/install`, {
     method: 'DELETE',
     headers: authHeaders(token),
   })
 }
 
 export async function getEnabledApps(token: string) {
-  const raw = await ofetch('/api/apps/enabled', {
+  const raw = await authedFetch('/api/apps/enabled', {
     headers: authHeaders(token),
   })
   return z.array(EnabledAppSchema).parse(raw)
@@ -296,7 +320,7 @@ export async function proxyApiRequest(
   headers?: Record<string, string>,
   body?: unknown,
 ) {
-  const raw = await ofetch('/api/proxy', {
+  const raw = await authedFetch('/api/proxy', {
     method: 'POST',
     headers: authHeaders(token),
     body: { appId, url, method, headers, body },
@@ -337,21 +361,21 @@ export async function getFilterLog(
   if (opts?.severity) params.set('severity', opts.severity)
   const qs = params.toString()
 
-  const raw = await ofetch(`/api/safety/log${qs ? `?${qs}` : ''}`, {
+  const raw = await authedFetch(`/api/safety/log${qs ? `?${qs}` : ''}`, {
     headers: authHeaders(token),
   })
   return z.array(FilterLogEntrySchema).parse(raw)
 }
 
 export async function getBlocklist(token: string) {
-  const raw = await ofetch('/api/safety/blocklist', {
+  const raw = await authedFetch('/api/safety/blocklist', {
     headers: authHeaders(token),
   }) as { words: unknown[] }
   return z.array(BlocklistWordSchema).parse(raw.words)
 }
 
 export async function updateBlocklist(token: string, words: BlocklistWord[]) {
-  const raw = await ofetch('/api/safety/blocklist', {
+  const raw = await authedFetch('/api/safety/blocklist', {
     method: 'PUT',
     headers: authHeaders(token),
     body: { words },
