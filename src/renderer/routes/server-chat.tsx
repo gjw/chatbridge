@@ -62,6 +62,7 @@ function ServerChatPage() {
   const [activeToolCall, setActiveToolCall] = useState<ActiveToolCall | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const appHostRef = useRef<AppHostHandle>(null)
 
   if (!accessToken) {
@@ -258,6 +259,7 @@ function ServerChatPage() {
       // Don't clear activeToolCall here — keep iframe visible
       abortRef.current = null
       void loadConversations()
+      inputRef.current?.focus()
     }
   }
 
@@ -384,6 +386,7 @@ function ServerChatPage() {
 
             <Group p="md" gap="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
               <TextInput
+                ref={inputRef}
                 style={{ flex: 1 }}
                 placeholder="Type a message..."
                 value={input}
