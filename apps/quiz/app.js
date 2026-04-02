@@ -88,6 +88,20 @@ function handleToolInvoke(msg) {
 }
 
 function toolStartQuiz(invocationId, params) {
+  // If quiz is already active, return current state instead of restarting
+  if (quizActive && questions.length > 0) {
+    const q = questions[currentIndex]
+    sendResult(invocationId, {
+      alreadyActive: true,
+      deck: currentDeckName,
+      questionNumber: currentIndex + 1,
+      totalQuestions: questions.length,
+      question: q.question,
+      answeredSoFar: results.length,
+    })
+    return
+  }
+
   const deckName = (params.deck || 'science').toLowerCase()
   const deck = DECKS[deckName]
 
