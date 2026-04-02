@@ -180,11 +180,11 @@ function Root() {
       const onboardingCompleted = onboardingStore.getState().completed
       const needsSetup = settingActions.needEditSetting()
 
-      // Auto-navigate to guide for new users who need setup
-      if (!isExceeded && !onboardingCompleted && needsSetup) {
-        router.navigate({ to: '/guide', replace: true })
-        return
-      }
+      // Skip old Chatbox onboarding — ChatBridge has its own auth flow
+      // if (!isExceeded && !onboardingCompleted && needsSetup) {
+      //   router.navigate({ to: '/guide', replace: true })
+      //   return
+      // }
 
       // 是否需要弹出关于窗口（更新后首次启动）
       // 目前仅在桌面版本更新后首次启动、且网络环境为"外网"的情况下才自动弹窗
