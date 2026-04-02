@@ -175,6 +175,7 @@ router.post('/:id/messages', async (req, res, next) => {
         matchedWords: userFilter.matched,
         severity: userFilter.severity,
         source: 'user_input',
+        actionTaken: 'logged',
       })
     }
 
