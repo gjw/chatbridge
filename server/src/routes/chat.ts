@@ -9,6 +9,7 @@ import { stepCountIs } from 'ai'
 import { buildToolSet } from '../services/tools.js'
 import { submitResult as submitToolResult } from '../services/toolCalls.js'
 import { AppToolDefSchema } from '../shared/app-schemas.js'
+import { filterText, logFilterMatch } from '../services/contentFilter.js'
 import type { ModelMessage } from '@ai-sdk/provider-utils'
 
 const router = Router()
@@ -163,6 +164,19 @@ router.post('/:id/messages', async (req, res, next) => {
        RETURNING *`,
       [conversationId, JSON.stringify([{ type: 'text', text: content }])],
     )
+
+    // 1b. Filter user input for safety
+    const userFilter = filterText(content)
+    if (userFilter.matched.length > 0 && userFilter.severity) {
+      void logFilterMatch({
+        userId,
+        conversationId,
+        content,
+        matchedWords: userFilter.matched,
+        severity: userFilter.severity,
+        source: 'user_input',
+      })
+    }
 
     // 2. Fetch conversation history for context
     const historyRows = await queryRows(
