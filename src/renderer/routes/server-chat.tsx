@@ -12,8 +12,8 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
-import { IconPlus, IconSend, IconTrash } from '@tabler/icons-react'
-import { createFileRoute } from '@tanstack/react-router'
+import { IconLogout, IconPlus, IconSend, IconShield, IconTrash } from '@tabler/icons-react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from '@/lib/api'
 import type { Conversation, ConversationWithMessages, SseEvent } from '@/lib/api'
@@ -52,6 +52,8 @@ interface ActiveToolCall {
 
 function ServerChatPage() {
   const accessToken = useAuthInfoStore((s) => s.accessToken)
+  const user = useAuthInfoStore((s) => s.user)
+  const navigate = useNavigate()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<DisplayMessage[]>([])
@@ -301,6 +303,35 @@ function ServerChatPage() {
             ))}
           </Stack>
         </ScrollArea>
+
+        <Stack gap={4} mt="auto" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+          {user?.role !== 'student' && (
+            <Button
+              variant="subtle"
+              size="xs"
+              leftSection={<IconShield size={14} />}
+              onClick={() => void navigate({ to: '/admin/safety' })}
+              fullWidth
+              justify="flex-start"
+            >
+              Safety Dashboard
+            </Button>
+          )}
+          <Button
+            variant="subtle"
+            size="xs"
+            color="red"
+            leftSection={<IconLogout size={14} />}
+            onClick={() => {
+              authInfoStore.getState().logout()
+              window.location.href = '/login'
+            }}
+            fullWidth
+            justify="flex-start"
+          >
+            Sign out ({user?.name ?? 'unknown'})
+          </Button>
+        </Stack>
       </Stack>
 
       {/* Chat area */}
