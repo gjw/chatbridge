@@ -309,7 +309,7 @@ function ServerChatPage() {
           <>
             <ScrollArea style={{ flex: 1 }} p="md" viewportRef={scrollRef}>
               <Stack gap="sm">
-                {messages.map((m) => (
+                {messages.filter((m) => m.role !== 'tool').map((m) => (
                   <Paper
                     key={m.id}
                     p="sm"
@@ -321,21 +321,9 @@ function ServerChatPage() {
                       backgroundColor:
                         m.role === 'user'
                           ? 'var(--mantine-color-blue-light)'
-                          : m.role === 'tool'
-                            ? 'var(--mantine-color-grape-light)'
-                            : 'var(--mantine-color-default)',
+                          : 'var(--mantine-color-default)',
                     }}
                   >
-                    <Group gap={4} mb={4}>
-                      <Text size="xs" c="dimmed">
-                        {m.role}
-                      </Text>
-                      {m.role === 'tool' && (
-                        <Badge size="xs" variant="light" color="grape">
-                          tool
-                        </Badge>
-                      )}
-                    </Group>
                     <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
                       {m.text || (streaming && m.role === 'assistant' ? '...' : '')}
                     </Text>
