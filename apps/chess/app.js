@@ -156,9 +156,9 @@ function toolGetBoardState() {
   return {
     fen: game.fen(),
     turn: game.turn() === 'w' ? 'white' : 'black',
-    moveCount: Math.ceil(game.moveNumber()),
+    moveCount: Math.floor(game.history().length / 2) + 1,
     gameStatus: getGameStatus(),
-    isCheck: game.isCheck(),
+    isCheck: game.in_check(),
     legalMoves: game.moves(),
   }
 }
@@ -191,11 +191,11 @@ function toolResign() {
 // ---------------------------------------------------------------------------
 
 function getGameStatus() {
-  if (game.isCheckmate()) return game.turn() === 'w' ? 'black_wins' : 'white_wins'
-  if (game.isDraw()) return 'draw'
-  if (game.isStalemate()) return 'draw_stalemate'
-  if (game.isThreefoldRepetition()) return 'draw_repetition'
-  if (game.isInsufficientMaterial()) return 'draw_insufficient'
+  if (game.in_checkmate()) return game.turn() === 'w' ? 'black_wins' : 'white_wins'
+  if (game.in_draw()) return 'draw'
+  if (game.in_stalemate()) return 'draw_stalemate'
+  if (game.in_threefold_repetition()) return 'draw_repetition'
+  if (game.insufficient_material()) return 'draw_insufficient'
   return 'in_progress'
 }
 
@@ -233,7 +233,7 @@ function renderBoard() {
 
   // Find king in check
   let checkSquare = null
-  if (game.isCheck()) {
+  if (game.in_check()) {
     // Find the king of the current turn
     const board8x8 = game.board()
     for (let r = 0; r < 8; r++) {
@@ -339,7 +339,7 @@ function onSquareClick(square) {
 function updateStatus() {
   const status = getGameStatus()
   const turn = game.turn() === 'w' ? 'White' : 'Black'
-  const check = game.isCheck() ? ' (Check!)' : ''
+  const check = game.in_check() ? ' (Check!)' : ''
 
   switch (status) {
     case 'in_progress':
@@ -360,7 +360,7 @@ function updateStatus() {
   }
 
   document.getElementById('turn-indicator').textContent =
-    `Move ${Math.ceil(game.moveNumber())}`
+    `Move ${Math.ceil(game.history().length / 2 + 1)}`
 
   // Update move history
   const history = game.history()
