@@ -115,15 +115,21 @@ function ServerChatPage() {
   const handleToolCall = async (evt: SseEvent & { type: 'tool-call' }) => {
     if (!activeId) return
 
-    setActiveToolCall({
-      toolCallId: evt.toolCallId,
-      toolName: evt.toolName,
-      args: evt.args,
-      appSlug: evt.appSlug,
-      appId: evt.appId,
-      appEntryUrl: evt.appEntryUrl,
-      rendersUi: evt.rendersUi,
-      status: 'invoking',
+    // If same app is already mounted, just update the tool call metadata (don't remount iframe)
+    setActiveToolCall((prev) => {
+      if (prev && prev.appId === evt.appId) {
+        return { ...prev, toolCallId: evt.toolCallId, toolName: evt.toolName, args: evt.args, status: 'invoking' as const }
+      }
+      return {
+        toolCallId: evt.toolCallId,
+        toolName: evt.toolName,
+        args: evt.args,
+        appSlug: evt.appSlug,
+        appId: evt.appId,
+        appEntryUrl: evt.appEntryUrl,
+        rendersUi: evt.rendersUi,
+        status: 'invoking' as const,
+      }
     })
 
     // Add a tool status message
@@ -133,9 +139,7 @@ function ServerChatPage() {
     ])
 
     try {
-      // Wait for AppHost to be ready and invoke
-      // Give iframe time to load — the AppHost onReady callback will fire
-      // For now, wait a short period then invoke
+      // Wait for AppHost to be ready (may already be ready if iframe is reused)
       const waitForReady = (): Promise<void> =>
         new Promise((resolve) => {
           const check = () => {
@@ -146,7 +150,6 @@ function ServerChatPage() {
             }
           }
           check()
-          // Timeout after 10s waiting for ready
           setTimeout(resolve, 10_000)
         })
 
