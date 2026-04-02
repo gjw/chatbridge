@@ -586,6 +586,11 @@ export const Route = createRootRoute({
     if (!token) {
       throw redirect({ to: '/login' })
     }
+
+    // Redirect root to server-chat (the old Chatbox index is unused)
+    if (location.pathname === '/') {
+      throw redirect({ to: '/server-chat' })
+    }
   },
   component: () => {
     useI18nEffect()
