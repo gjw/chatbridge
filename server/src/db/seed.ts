@@ -43,15 +43,24 @@ async function seed(): Promise<void> {
 
   // --- Apps ---
   // Load manifests from apps/ directory
-  let chessManifest: unknown
-  let wordleManifest: unknown
+  const baseUrl = process.env.APP_BASE_URL ?? ''
+
+  let chessManifest: Record<string, unknown>
+  let wordleManifest: Record<string, unknown>
   try {
-    chessManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/chess/manifest.json'), 'utf-8'))
-    wordleManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/wordle/manifest.json'), 'utf-8'))
+    chessManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/chess/manifest.json'), 'utf-8')) as Record<string, unknown>
+    wordleManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/wordle/manifest.json'), 'utf-8')) as Record<string, unknown>
   } catch {
     console.warn('  Could not load app manifests from apps/ directory, using inline defaults')
     chessManifest = { slug: 'chess', name: 'Chess', description: 'Chess game', trustTier: 'internal', entryUrl: 'http://localhost:3200', tools: [{ name: 'start_game', description: 'Start game', parameters: {}, rendersUi: true }], permissions: ['ui:render'] }
     wordleManifest = { slug: 'wordle', name: 'Wordle', description: 'Word guessing game', trustTier: 'external_public', entryUrl: 'http://localhost:3201', tools: [{ name: 'start_game', description: 'Start game', parameters: {}, rendersUi: true }], permissions: ['ui:render', 'api:proxy'] }
+  }
+
+  // In production, rewrite entryUrl to use the public base URL
+  if (baseUrl) {
+    chessManifest.entryUrl = `${baseUrl}/apps/chess/`
+    wordleManifest.entryUrl = `${baseUrl}/apps/wordle/`
+    console.info(`  App URLs rewritten to ${baseUrl}/apps/...`)
   }
 
   const chessResult = await pool.query(
