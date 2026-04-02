@@ -194,6 +194,7 @@ function ServerChatPage() {
 
     const userText = input.trim()
     setInput('')
+    setActiveToolCall(null)
 
     const tempUserId = `temp-${Date.now()}`
     setMessages((prev) => [...prev, { id: tempUserId, role: 'user', text: userText }])
@@ -231,8 +232,8 @@ function ServerChatPage() {
           // is blocked waiting for our result
           void handleToolCall(evt)
         } else if (evt.type === 'tool-result') {
-          // LLM got the result, remove the active tool call UI
-          setActiveToolCall(null)
+          // Mark tool as done but keep iframe visible
+          setActiveToolCall((prev) => prev ? { ...prev, status: 'done' } : null)
         }
       }
     } catch (err: unknown) {
@@ -248,7 +249,7 @@ function ServerChatPage() {
       }
     } finally {
       setStreaming(false)
-      setActiveToolCall(null)
+      // Don't clear activeToolCall here — keep iframe visible
       abortRef.current = null
       void loadConversations()
     }
