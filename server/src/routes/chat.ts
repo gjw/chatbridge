@@ -230,7 +230,7 @@ router.post('/:id/messages', async (req, res, next) => {
       `INSERT INTO messages (conversation_id, role, content, model)
        VALUES ($1, 'assistant', $2, $3)
        RETURNING *`,
-      [conversationId, JSON.stringify([{ type: 'text', text: '' }]), 'gpt-4o-mini'],
+      [conversationId, JSON.stringify([{ type: 'text', text: '' }]), 'gpt-5.4'],
     )
 
     // 6. Set up SSE response

@@ -164,9 +164,9 @@ const MIDDLEWARE_STACK: LanguageModelMiddleware[] = [
 
 /**
  * Create a language model wrapped with the platform middleware stack.
- * @param modelId - OpenAI model identifier (default: gpt-4o-mini)
+ * @param modelId - OpenAI model identifier (default: gpt-5.4)
  */
-export function createSafeLLM(modelId = 'gpt-4o-mini'): LanguageModelV3 {
+export function createSafeLLM(modelId = 'gpt-5.4'): LanguageModelV3 {
   const baseModel = openai(modelId)
   return wrapLanguageModel({
     model: baseModel,
