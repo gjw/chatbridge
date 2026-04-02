@@ -79,6 +79,7 @@ function ServerChatPage() {
     async (id: string) => {
       const conv = await api.getConversation(accessToken, id)
       setActiveId(id)
+      setActiveToolCall(null)
       setMessages(parseMessages(conv))
     },
     [accessToken],
@@ -98,6 +99,7 @@ function ServerChatPage() {
     const conv = await api.createConversation(accessToken)
     setConversations((prev) => [conv, ...prev])
     setActiveId(conv.id)
+    setActiveToolCall(null)
     setMessages([])
   }
 
@@ -194,7 +196,6 @@ function ServerChatPage() {
 
     const userText = input.trim()
     setInput('')
-    setActiveToolCall(null)
 
     const tempUserId = `temp-${Date.now()}`
     setMessages((prev) => [...prev, { id: tempUserId, role: 'user', text: userText }])
