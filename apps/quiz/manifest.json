@@ -1,0 +1,49 @@
+{
+  "slug": "quiz",
+  "name": "Vocabulary Quiz",
+  "description": "Vocabulary quiz with visual card UI. Includes science and Spanish decks with 10 questions each. The LLM starts the quiz, relays student answers, and discusses results.",
+  "trustTier": "internal",
+  "entryUrl": "http://localhost:3202",
+  "tools": [
+    {
+      "name": "start_quiz",
+      "description": "Start a vocabulary quiz session. Returns the first question and total count. Default deck is 'science'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "deck": {
+            "type": "string",
+            "enum": ["science", "spanish"],
+            "description": "Which vocabulary deck to use. Defaults to 'science'."
+          }
+        }
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "check_answer",
+      "description": "Check the student's answer against the current question. Returns correct/incorrect, the right answer, and advances to the next question (or signals quiz complete).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "The student's answer to the current question"
+          }
+        },
+        "required": ["answer"]
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "get_score",
+      "description": "Get current quiz progress: questions answered, correct count, and detailed list of results including missed questions with correct answers.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "rendersUi": false
+    }
+  ],
+  "permissions": ["ui:render"]
+}
