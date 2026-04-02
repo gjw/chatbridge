@@ -6,6 +6,8 @@
  */
 
 import { execute } from '../db/queries.js'
+import { openai } from '@ai-sdk/openai'
+import { generateText } from 'ai'
 
 // ---------------------------------------------------------------------------
 // Blocklist
@@ -192,6 +194,55 @@ export function setBlocklistWords(words: Array<{ word: string; severity: Severit
   currentWords = [...words]
   blocklist = buildBlocklist(currentWords)
   console.info('[content-filter] Blocklist updated:', words.length, 'entries')
+}
+
+// ---------------------------------------------------------------------------
+// Tier 2: Sentiment / Crisis Classifier
+// ---------------------------------------------------------------------------
+
+const TIER2_PROMPT = `You are a K-12 student safety classifier. Analyze the student message for concerning content.
+
+Classify as exactly one of:
+- SAFE — normal student message
+- LOW — mild rudeness or frustration (not a safety concern)
+- MEDIUM — bullying, harassment, sexually inappropriate content
+- CRITICAL — self-harm, suicide ideation, violence threats, abuse disclosure
+
+Respond with ONLY the classification word and a brief reason, e.g.:
+CRITICAL: student expressing suicidal ideation
+SAFE: normal question about homework`
+
+/**
+ * Tier 2 classifier — uses a fast LLM to detect crisis signals that
+ * keyword matching would miss. Only called when Tier 1 doesn't flag critical.
+ */
+export async function classifyContent(text: string): Promise<{
+  severity: Severity | null
+  reason: string
+} | null> {
+  try {
+    const result = await generateText({
+      model: openai('gpt-4o-mini'),
+      system: TIER2_PROMPT,
+      prompt: text,
+      maxTokens: 50,
+    })
+
+    const response = result.text.trim()
+    const upper = response.toUpperCase()
+
+    if (upper.startsWith('CRITICAL')) {
+      return { severity: 'critical', reason: response }
+    }
+    if (upper.startsWith('MEDIUM')) {
+      return { severity: 'medium', reason: response }
+    }
+    // LOW and SAFE don't need logging
+    return null
+  } catch (err) {
+    console.error('[content-filter] Tier 2 classifier failed:', err)
+    return null
+  }
 }
 
 // ---------------------------------------------------------------------------

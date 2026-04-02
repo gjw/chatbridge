@@ -9,7 +9,7 @@ import { stepCountIs } from 'ai'
 import { buildToolSet } from '../services/tools.js'
 import { submitResult as submitToolResult } from '../services/toolCalls.js'
 import { AppToolDefSchema } from '../shared/app-schemas.js'
-import { filterText, logFilterMatch } from '../services/contentFilter.js'
+import { filterText, logFilterMatch, classifyContent } from '../services/contentFilter.js'
 import type { ModelMessage } from '@ai-sdk/provider-utils'
 
 const router = Router()
@@ -165,7 +165,7 @@ router.post('/:id/messages', async (req, res, next) => {
       [conversationId, JSON.stringify([{ type: 'text', text: content }])],
     )
 
-    // 1b. Filter user input for safety
+    // 1b. Filter user input for safety — Tier 1 (keyword) + Tier 2 (classifier)
     const userFilter = filterText(content)
     if (userFilter.matched.length > 0 && userFilter.severity) {
       void logFilterMatch({
@@ -176,6 +176,23 @@ router.post('/:id/messages', async (req, res, next) => {
         severity: userFilter.severity,
         source: 'user_input',
         actionTaken: 'logged',
+      })
+    }
+
+    // Tier 2: Run sentiment classifier if Tier 1 didn't flag critical
+    if (userFilter.severity !== 'critical') {
+      void classifyContent(content).then((classification) => {
+        if (classification) {
+          void logFilterMatch({
+            userId,
+            conversationId,
+            content,
+            matchedWords: [classification.reason],
+            severity: classification.severity ?? 'medium',
+            source: 'user_input',
+            actionTaken: 'logged',
+          })
+        }
       })
     }
 
