@@ -230,9 +230,13 @@ function ServerChatPage() {
           )
         } else if (evt.type === 'text-delta') {
           setMessages((prev) => {
-            const last = prev[prev.length - 1]
-            if (!last || last.role !== 'assistant') return prev
-            return [...prev.slice(0, -1), { ...last, text: last.text + evt.text }]
+            // Find the last assistant message (may not be the very last entry due to tool messages)
+            const lastAssistantIdx = prev.findLastIndex((m) => m.role === 'assistant')
+            if (lastAssistantIdx === -1) return prev
+            const updated = [...prev]
+            const msg = updated[lastAssistantIdx]
+            updated[lastAssistantIdx] = { ...msg, text: msg.text + evt.text }
+            return updated
           })
         } else if (evt.type === 'tool-call') {
           // Handle tool invocation asynchronously — the server's execute()
