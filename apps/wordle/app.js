@@ -170,6 +170,7 @@ function toolStartGame(invocationId, params) {
   currentGuess = ''
   gameOver = false
   won = false
+  Object.keys(letterStatus).forEach((k) => delete letterStatus[k])
 
   renderBoard()
   renderKeyboard()
