@@ -11,6 +11,8 @@ const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().default(''),
   GITHUB_CLIENT_ID: z.string().default(''),
   GITHUB_CLIENT_SECRET: z.string().default(''),
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
 })
 
 export const env = EnvSchema.parse(process.env)

@@ -138,7 +138,8 @@ export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
       if (!oauthIframe) break
 
       const serverOrigin = window.location.origin.replace(/:\d+$/, ':3100')
-      const authUrl = `${serverOrigin}/api/oauth/github/authorize?token=${encodeURIComponent(accessToken)}`
+      const provider = message.provider
+      const authUrl = `${serverOrigin}/api/oauth/${provider}/authorize?token=${encodeURIComponent(accessToken)}`
       const popup = window.open(authUrl, 'oauth-popup', 'width=600,height=700')
 
       // Poll for popup close, then notify the app

@@ -73,6 +73,7 @@ export type BridgeApiRequest = z.infer<typeof BridgeApiRequestSchema>
 export const BridgeOAuthRequestSchema = z.object({
   type: z.literal('bridge:oauth:request'),
   requestId: z.string().min(1),
+  provider: z.string().min(1),
 })
 export type BridgeOAuthRequest = z.infer<typeof BridgeOAuthRequestSchema>
 

@@ -187,6 +187,7 @@ async function toolAuthorizeGitHub(invocationId) {
     window.parent.postMessage({
       type: 'bridge:oauth:request',
       requestId: 'oauth-' + Math.random().toString(36).slice(2),
+      provider: 'github',
     }, '*')
   })
 }

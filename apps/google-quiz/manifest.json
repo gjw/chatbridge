@@ -1,0 +1,64 @@
+{
+  "slug": "google-quiz",
+  "name": "Vocab Quiz (Google Sheets)",
+  "description": "Vocabulary quiz that pulls flashcard decks from Google Sheets. Teachers create decks in Sheets, students study them here with AI tutoring.",
+  "trustTier": "external_auth",
+  "entryUrl": "http://localhost:3205",
+  "tools": [
+    {
+      "name": "authorize_google",
+      "description": "Connect the student's Google account so the app can read shared Google Sheets. Must be called before load_deck.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "load_deck",
+      "description": "Load a flashcard deck from a Google Sheet. The sheet should have columns: Term, Definition, and optionally Hint. Pass the sheet URL or ID.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sheetUrl": {
+            "type": "string",
+            "description": "Google Sheets URL or spreadsheet ID"
+          }
+        },
+        "required": ["sheetUrl"]
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "check_answer",
+      "description": "Check a student's answer against the current flashcard. Returns whether correct, the right answer, and any hint.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "The term being quizzed"
+          },
+          "studentAnswer": {
+            "type": "string",
+            "description": "The student's answer to check"
+          }
+        },
+        "required": ["term", "studentAnswer"]
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "get_score",
+      "description": "Get the student's current quiz score and which terms they got right/wrong.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "rendersUi": false
+    }
+  ],
+  "permissions": ["ui:render", "api:proxy"]
+}

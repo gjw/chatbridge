@@ -9,12 +9,12 @@ import { pool } from '../db/pool.js'
 const router = Router()
 
 // ---------------------------------------------------------------------------
-// In-memory state store for OAuth CSRF protection (state → userId)
+// In-memory state store for OAuth CSRF protection (state → userId + provider)
 // Entries expire after 10 minutes.
 // ---------------------------------------------------------------------------
 
 const STATE_TTL_MS = 10 * 60 * 1000
-const pendingStates = new Map<string, { userId: string; createdAt: number }>()
+const pendingStates = new Map<string, { userId: string; provider: string; createdAt: number }>()
 
 function cleanExpiredStates(): void {
   const now = Date.now()
@@ -25,14 +25,9 @@ function cleanExpiredStates(): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// GET /oauth/github/authorize — start OAuth flow (requires auth)
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// GET /oauth/github/authorize — start OAuth flow (popup opens this directly)
-// Accepts JWT via query param since popups can't send Authorization headers.
-// ---------------------------------------------------------------------------
+// ============================================================
+// GitHub OAuth
+// ============================================================
 
 router.get('/github/authorize', (req, res) => {
   if (!env.GITHUB_CLIENT_ID) {
@@ -40,21 +35,18 @@ router.get('/github/authorize', (req, res) => {
     return
   }
 
-  // Auth via query param (popup window can't send Authorization header)
   const token = typeof req.query.token === 'string' ? req.query.token : ''
   let userId: string
   try {
-    const payload = verifyToken(token)
-    userId = payload.sub
+    userId = verifyToken(token).sub
   } catch {
     res.status(401).send('Invalid or missing token')
     return
   }
 
   cleanExpiredStates()
-
   const state = crypto.randomBytes(20).toString('hex')
-  pendingStates.set(state, { userId, createdAt: Date.now() })
+  pendingStates.set(state, { userId, provider: 'github', createdAt: Date.now() })
 
   const callbackUrl = `${req.protocol}://${req.get('host')}/api/oauth/github/callback`
   const params = new URLSearchParams({
@@ -67,71 +59,32 @@ router.get('/github/authorize', (req, res) => {
   res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`)
 })
 
-// ---------------------------------------------------------------------------
-// GET /oauth/github/callback — exchange code for token (public — GitHub redirects here)
-// ---------------------------------------------------------------------------
-
-const CallbackQuery = z.object({
-  code: z.string().min(1),
-  state: z.string().min(1),
-})
-
 router.get('/github/callback', async (req, res, next) => {
   try {
-    const parsed = CallbackQuery.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).send('Invalid callback parameters')
-      return
-    }
-    const { code, state } = parsed.data
+    const { code, state } = z.object({ code: z.string().min(1), state: z.string().min(1) }).parse(req.query)
 
-    // Look up state → userId
     const entry = pendingStates.get(state)
-    if (!entry) {
+    if (!entry || entry.provider !== 'github') {
       res.status(400).send('Invalid or expired OAuth state')
       return
     }
     pendingStates.delete(state)
-
-    // Check expiry
     if (Date.now() - entry.createdAt > STATE_TTL_MS) {
       res.status(400).send('OAuth state expired')
       return
     }
 
-    // Exchange code for access token
     const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        client_id: env.GITHUB_CLIENT_ID,
-        client_secret: env.GITHUB_CLIENT_SECRET,
-        code,
-      }),
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ client_id: env.GITHUB_CLIENT_ID, client_secret: env.GITHUB_CLIENT_SECRET, code }),
     })
+    const tokenData = z.object({ access_token: z.string() }).parse(await tokenResponse.json())
 
-    const tokenData = z
-      .object({
-        access_token: z.string(),
-        token_type: z.string(),
-        scope: z.string(),
-      })
-      .parse(await tokenResponse.json())
-
-    // Look up the GitHub app ID from our apps table
-    const appResult = await pool.query(
-      `SELECT id FROM apps WHERE slug = 'github' AND status = 'approved'`,
-    )
-    if (appResult.rows.length === 0) {
-      res.status(500).send('GitHub app not registered')
-      return
-    }
+    const appResult = await pool.query(`SELECT id FROM apps WHERE slug = 'github' AND status = 'approved'`)
+    if (appResult.rows.length === 0) { res.status(500).send('GitHub app not registered'); return }
     const appId = (appResult.rows[0] as { id: string }).id
 
-    // Upsert token into oauth_tokens
     await pool.query(
       `INSERT INTO oauth_tokens (user_id, app_id, provider, access_token)
        VALUES ($1, $2, 'github', $3)
@@ -140,39 +93,143 @@ router.get('/github/callback', async (req, res, next) => {
       [entry.userId, appId, tokenData.access_token],
     )
 
-    // Render success page that closes the popup
-    res.send(`<!DOCTYPE html>
-<html>
-<head><title>GitHub Connected</title></head>
-<body style="font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f6f8fa;">
-  <div style="text-align: center;">
-    <h2 style="color: #24292f;">GitHub Connected!</h2>
-    <p style="color: #57606a;">You can close this window.</p>
-    <script>setTimeout(() => window.close(), 1500)</script>
-  </div>
-</body>
-</html>`)
-  } catch (err) {
-    next(err)
-  }
+    res.send(successPage('GitHub Connected!'))
+  } catch (err) { next(err) }
 })
-
-// ---------------------------------------------------------------------------
-// GET /oauth/github/status — check if user has authorized (requires auth)
-// ---------------------------------------------------------------------------
 
 router.get('/github/status', requireAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT 1 FROM oauth_tokens ot
-       JOIN apps a ON a.id = ot.app_id
+      `SELECT 1 FROM oauth_tokens ot JOIN apps a ON a.id = ot.app_id
        WHERE ot.user_id = $1 AND a.slug = 'github' AND ot.provider = 'github'`,
       [req.user!.sub],
     )
     res.json({ authorized: result.rows.length > 0 })
-  } catch (err) {
-    next(err)
-  }
+  } catch (err) { next(err) }
 })
+
+// ============================================================
+// Google OAuth
+// ============================================================
+
+router.get('/google/authorize', (req, res) => {
+  if (!env.GOOGLE_CLIENT_ID) {
+    res.status(500).json({ error: 'Google OAuth not configured' })
+    return
+  }
+
+  const token = typeof req.query.token === 'string' ? req.query.token : ''
+  let userId: string
+  try {
+    userId = verifyToken(token).sub
+  } catch {
+    res.status(401).send('Invalid or missing token')
+    return
+  }
+
+  cleanExpiredStates()
+  const state = crypto.randomBytes(20).toString('hex')
+  pendingStates.set(state, { userId, provider: 'google', createdAt: Date.now() })
+
+  const callbackUrl = `${req.protocol}://${req.get('host')}/api/oauth/google/callback`
+  const params = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: callbackUrl,
+    response_type: 'code',
+    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+    state,
+    access_type: 'offline',
+    prompt: 'consent',
+  })
+
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`)
+})
+
+router.get('/google/callback', async (req, res, next) => {
+  try {
+    const { code, state } = z.object({ code: z.string().min(1), state: z.string().min(1) }).parse(req.query)
+
+    const entry = pendingStates.get(state)
+    if (!entry || entry.provider !== 'google') {
+      res.status(400).send('Invalid or expired OAuth state')
+      return
+    }
+    pendingStates.delete(state)
+    if (Date.now() - entry.createdAt > STATE_TTL_MS) {
+      res.status(400).send('OAuth state expired')
+      return
+    }
+
+    const callbackUrl = `${req.protocol}://${req.get('host')}/api/oauth/google/callback`
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: env.GOOGLE_CLIENT_ID,
+        client_secret: env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: callbackUrl,
+        grant_type: 'authorization_code',
+      }),
+    })
+
+    const tokenData = z.object({
+      access_token: z.string(),
+      refresh_token: z.string().optional(),
+      expires_in: z.number().optional(),
+    }).parse(await tokenResponse.json())
+
+    // Find the google-quiz app
+    const appResult = await pool.query(`SELECT id FROM apps WHERE slug = 'google-quiz' AND status = 'approved'`)
+    if (appResult.rows.length === 0) { res.status(500).send('Google Quiz app not registered'); return }
+    const appId = (appResult.rows[0] as { id: string }).id
+
+    const expiresAt = tokenData.expires_in
+      ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+      : null
+
+    await pool.query(
+      `INSERT INTO oauth_tokens (user_id, app_id, provider, access_token, refresh_token, expires_at)
+       VALUES ($1, $2, 'google', $3, $4, $5)
+       ON CONFLICT (user_id, app_id, provider)
+       DO UPDATE SET access_token = EXCLUDED.access_token,
+                     refresh_token = COALESCE(EXCLUDED.refresh_token, oauth_tokens.refresh_token),
+                     expires_at = EXCLUDED.expires_at,
+                     created_at = now()`,
+      [entry.userId, appId, tokenData.access_token, tokenData.refresh_token ?? null, expiresAt],
+    )
+
+    res.send(successPage('Google Connected!'))
+  } catch (err) { next(err) }
+})
+
+router.get('/google/status', requireAuth, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT 1 FROM oauth_tokens ot JOIN apps a ON a.id = ot.app_id
+       WHERE ot.user_id = $1 AND a.slug = 'google-quiz' AND ot.provider = 'google'`,
+      [req.user!.sub],
+    )
+    res.json({ authorized: result.rows.length > 0 })
+  } catch (err) { next(err) }
+})
+
+// ============================================================
+// Shared
+// ============================================================
+
+function successPage(title: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head><title>${title}</title></head>
+<body style="font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f6f8fa;">
+  <div style="text-align: center;">
+    <h2 style="color: #24292f;">${title}</h2>
+    <p style="color: #57606a;">You can close this window.</p>
+    <script>setTimeout(() => window.close(), 1500)</script>
+  </div>
+</body>
+</html>`
+}
 
 export { router as oauthRouter }

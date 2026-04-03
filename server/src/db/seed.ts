@@ -49,17 +49,20 @@ async function seed(): Promise<void> {
   let wordleManifest: Record<string, unknown>
   let quizManifest: Record<string, unknown>
   let githubManifest: Record<string, unknown>
+  let googleQuizManifest: Record<string, unknown>
   try {
     chessManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/chess/manifest.json'), 'utf-8')) as Record<string, unknown>
     wordleManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/wordle/manifest.json'), 'utf-8')) as Record<string, unknown>
     quizManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/quiz/manifest.json'), 'utf-8')) as Record<string, unknown>
     githubManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/github/manifest.json'), 'utf-8')) as Record<string, unknown>
+    googleQuizManifest = JSON.parse(readFileSync(resolve(__dirname, '../../../apps/google-quiz/manifest.json'), 'utf-8')) as Record<string, unknown>
   } catch {
     console.warn('  Could not load app manifests from apps/ directory, using inline defaults')
     chessManifest = { slug: 'chess', name: 'Chess', description: 'Chess game', trustTier: 'internal', entryUrl: 'http://localhost:3200', tools: [{ name: 'start_game', description: 'Start game', parameters: {}, rendersUi: true }], permissions: ['ui:render'] }
     wordleManifest = { slug: 'wordle', name: 'Wordle', description: 'Word guessing game', trustTier: 'external_public', entryUrl: 'http://localhost:3201', tools: [{ name: 'start_game', description: 'Start game', parameters: {}, rendersUi: true }], permissions: ['ui:render', 'api:proxy'] }
     quizManifest = { slug: 'quiz', name: 'Vocabulary Quiz', description: 'Vocabulary quiz with flashcards', trustTier: 'internal', entryUrl: 'http://localhost:3202', tools: [{ name: 'start_quiz', description: 'Start quiz', parameters: {}, rendersUi: true }], permissions: ['ui:render'] }
     githubManifest = { slug: 'github', name: 'GitHub Profile', description: 'GitHub profile viewer', trustTier: 'external_auth', entryUrl: 'http://localhost:3205', tools: [{ name: 'authorize_github', description: 'Connect GitHub', parameters: {}, rendersUi: true }], permissions: ['ui:render', 'api:proxy'] }
+    googleQuizManifest = { slug: 'google-quiz', name: 'Vocab Quiz (Google Sheets)', description: 'Quiz from Google Sheets', trustTier: 'external_auth', entryUrl: 'http://localhost:3205', tools: [{ name: 'authorize_google', description: 'Connect Google', parameters: {}, rendersUi: true }], permissions: ['ui:render', 'api:proxy'] }
   }
 
   // In production, rewrite entryUrl to use the public base URL
@@ -68,6 +71,7 @@ async function seed(): Promise<void> {
     wordleManifest.entryUrl = `${baseUrl}/apps/wordle/`
     quizManifest.entryUrl = `${baseUrl}/apps/quiz/`
     githubManifest.entryUrl = `${baseUrl}/apps/github/`
+    googleQuizManifest.entryUrl = `${baseUrl}/apps/google-quiz/`
     console.info(`  App URLs rewritten to ${baseUrl}/apps/...`)
   }
 
@@ -107,7 +111,16 @@ async function seed(): Promise<void> {
   )
   const githubId: string = githubResult.rows[0].id
 
-  console.info('  Apps: chess (internal), wordle (external_public), quiz (internal), github (external_auth)')
+  const googleQuizResult = await pool.query(
+    `INSERT INTO apps (slug, manifest, status, trust_tier, created_by, approved_by)
+     VALUES ($1, $2, 'approved', $3, $4, $4)
+     ON CONFLICT (slug) DO UPDATE SET manifest = EXCLUDED.manifest, status = 'approved', trust_tier = EXCLUDED.trust_tier
+     RETURNING id`,
+    ['google-quiz', JSON.stringify(googleQuizManifest), 'external_auth', adminId],
+  )
+  const googleQuizId: string = googleQuizResult.rows[0].id
+
+  console.info('  Apps: chess (internal), wordle (external_public), quiz (internal), github (external_auth), google-quiz (external_auth)')
 
   // --- App Installations ---
   const installPairs = [
@@ -115,6 +128,7 @@ async function seed(): Promise<void> {
     [wordleId, adminId], [wordleId, teacherId], [wordleId, studentId],
     [quizId, adminId], [quizId, teacherId], [quizId, studentId],
     [githubId, adminId], [githubId, teacherId], [githubId, studentId],
+    [googleQuizId, adminId], [googleQuizId, teacherId], [googleQuizId, studentId],
   ]
   for (const [appId, userId] of installPairs) {
     await pool.query(

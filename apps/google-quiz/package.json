@@ -1,0 +1,9 @@
+{
+  "name": "@chatbridge/google-quiz",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vocabulary quiz app that pulls decks from Google Sheets (external_auth tier)",
+  "scripts": {
+    "serve": "npx serve -l 3205 -s ."
+  }
+}
