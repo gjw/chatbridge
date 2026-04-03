@@ -84,6 +84,7 @@ function ServerChatPage() {
       setActiveId(id)
       setActiveToolCall(null)
       setMessages(parseMessages(conv))
+      setTimeout(() => inputRef.current?.focus(), 50)
     },
     [accessToken],
   )
@@ -104,6 +105,7 @@ function ServerChatPage() {
     setActiveId(conv.id)
     setActiveToolCall(null)
     setMessages([])
+    setTimeout(() => inputRef.current?.focus(), 50)
   }
 
   const handleDelete = async (id: string) => {

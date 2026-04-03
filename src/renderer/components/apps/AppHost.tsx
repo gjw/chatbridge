@@ -266,6 +266,7 @@ export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
         sandbox="allow-scripts allow-same-origin"
         referrerPolicy="no-referrer"
         loading="lazy"
+        tabIndex={-1}
         onLoad={handleIframeLoad}
         style={{
           width: '100%',
