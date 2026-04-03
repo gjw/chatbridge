@@ -29,13 +29,22 @@ One-time setup to get the Google Sheets quiz app working. Takes ~20 minutes.
    - Check `Google Sheets API .../auth/spreadsheets.readonly`
    - Click **Update** → **Save and Continue**
 6. **Test users** page → **Add Users**
-   - Add the Google account(s) you'll demo with
-   - These are the only accounts that can authorize while the app is in "Testing" mode
+   - Add the real Google/Gmail account(s) you'll sign into during the demo
+   - These are **real Google accounts**, completely separate from ChatBridge
+     users. When a ChatBridge student clicks "Connect Google," a Google login
+     popup opens and they sign in with their actual Gmail. Google checks if
+     that Gmail is on this list. If not, it blocks them.
+   - One Gmail account is enough for the demo — you can reuse it across all
+     three ChatBridge users (admin, teacher, student).
+   - No changes to ChatBridge seed data needed. The ChatBridge account and
+     Google account are unrelated; the server just stores the resulting
+     token keyed to whichever ChatBridge user triggered the flow.
    - Click **Save and Continue**
 7. Click **Back to Dashboard**
 
-> **Note:** In Testing mode, only the users you add here can use OAuth.
-> This is fine — you don't need to publish or verify the app for a demo.
+> **Note:** In Testing mode, only the users you explicitly add here can
+> authorize. This is fine — you never need to publish or verify the app
+> for a class demo.
 
 ## 4. Create OAuth credentials
 
