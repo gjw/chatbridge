@@ -23,6 +23,9 @@ import type { AppHostHandle } from '@/components/apps/AppHost'
 
 export const Route = createFileRoute('/server-chat')({
   component: ServerChatPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    conv: typeof search.conv === 'string' ? search.conv : undefined,
+  }),
 })
 
 // ---------------------------------------------------------------------------
@@ -51,6 +54,7 @@ interface ActiveToolCall {
 // ---------------------------------------------------------------------------
 
 function ServerChatPage() {
+  const { conv: convParam } = Route.useSearch()
   const accessToken = useAuthInfoStore((s) => s.accessToken)
   const user = useAuthInfoStore((s) => s.user)
   const navigate = useNavigate()
@@ -91,8 +95,12 @@ function ServerChatPage() {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    void loadConversations()
-  }, [loadConversations])
+    void loadConversations().then(() => {
+      if (convParam && !activeId) {
+        void loadConversation(convParam)
+      }
+    })
+  }, [loadConversations, convParam, activeId, loadConversation])
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
