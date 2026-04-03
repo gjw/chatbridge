@@ -194,7 +194,7 @@ export async function* sendMessage(
 export type SseEvent =
   | { type: 'message-ids'; userMessageId: string; assistantMessageId: string }
   | { type: 'text-delta'; text: string }
-  | { type: 'tool-call'; toolCallId: string; toolName: string; args: Record<string, unknown>; appSlug: string; appId: string; appEntryUrl: string; rendersUi: boolean }
+  | { type: 'tool-call'; toolCallId: string; toolName: string; args: Record<string, unknown>; appSlug: string; appId: string; appEntryUrl: string; trustTier?: string; rendersUi: boolean }
   | { type: 'tool-result'; toolCallId: string; toolName: string; result: unknown }
   | { type: 'done'; usage: { inputTokens: number; outputTokens: number } }
   | { type: 'error'; error: string }

@@ -1,0 +1,45 @@
+{
+  "slug": "github",
+  "name": "GitHub Profile",
+  "description": "View your GitHub profile and repositories. Demonstrates the external_auth trust tier with OAuth2 authorization.",
+  "trustTier": "external_auth",
+  "entryUrl": "http://localhost:3205",
+  "tools": [
+    {
+      "name": "authorize_github",
+      "description": "Connect the user's GitHub account via OAuth. Must be called before get_profile or list_repos. If the user is already connected, returns immediately.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "get_profile",
+      "description": "Fetch and display the authenticated user's GitHub profile including avatar, name, bio, and stats.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "rendersUi": true
+    },
+    {
+      "name": "list_repos",
+      "description": "Fetch and display the authenticated user's GitHub repositories sorted by most recently updated, showing name, description, language, and star count.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of repos to show (default 10, max 30)"
+          }
+        },
+        "required": []
+      },
+      "rendersUi": true
+    }
+  ],
+  "permissions": ["ui:render", "api:proxy"]
+}
