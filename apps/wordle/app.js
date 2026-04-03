@@ -152,6 +152,18 @@ function handleToolInvoke(msg) {
 }
 
 function toolStartGame(invocationId, params) {
+  // If a game is already in progress, return current state instead of restarting
+  if (targetWord && !gameOver) {
+    sendResult(invocationId, {
+      alreadyActive: true,
+      guessNumber: guesses.length + 1,
+      maxGuesses: MAX_GUESSES,
+      wordLength: WORD_LENGTH,
+      hardMode,
+    })
+    return
+  }
+
   hardMode = params.hardMode || false
   targetWord = TARGET_WORDS[Math.floor(Math.random() * TARGET_WORDS.length)].toLowerCase()
   guesses = []
