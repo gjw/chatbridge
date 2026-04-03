@@ -93,14 +93,19 @@ function ServerChatPage() {
     [accessToken],
   )
 
+  const convParamHandled = useRef(false)
+
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     void loadConversations().then(() => {
-      if (convParam && !activeId) {
-        void loadConversation(convParam)
+      if (convParam && !convParamHandled.current) {
+        convParamHandled.current = true
+        void loadConversation(convParam).catch((err) => {
+          console.error('[server-chat] Failed to load conversation from URL:', err)
+        })
       }
     })
-  }, [loadConversations, convParam, activeId, loadConversation])
+  }, [loadConversations, convParam, loadConversation])
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
