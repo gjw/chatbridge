@@ -70,6 +70,12 @@ export const BridgeApiRequestSchema = z.object({
 })
 export type BridgeApiRequest = z.infer<typeof BridgeApiRequestSchema>
 
+export const BridgeOAuthRequestSchema = z.object({
+  type: z.literal('bridge:oauth:request'),
+  requestId: z.string().min(1),
+})
+export type BridgeOAuthRequest = z.infer<typeof BridgeOAuthRequestSchema>
+
 // ============================================================
 // Platform → App (response)
 // ============================================================
@@ -82,6 +88,12 @@ export const BridgeApiResponseSchema = z.object({
 })
 export type BridgeApiResponse = z.infer<typeof BridgeApiResponseSchema>
 
+export const BridgeOAuthCompleteSchema = z.object({
+  type: z.literal('bridge:oauth:complete'),
+  requestId: z.string().min(1),
+})
+export type BridgeOAuthComplete = z.infer<typeof BridgeOAuthCompleteSchema>
+
 // ============================================================
 // Discriminated unions
 // ============================================================
@@ -91,6 +103,7 @@ export const PlatformToAppMessageSchema = z.discriminatedUnion('type', [
   BridgeToolInvokeSchema,
   BridgeDestroySchema,
   BridgeApiResponseSchema,
+  BridgeOAuthCompleteSchema,
 ])
 export type PlatformToAppMessage = z.infer<typeof PlatformToAppMessageSchema>
 
@@ -100,6 +113,7 @@ export const AppToPlatformMessageSchema = z.discriminatedUnion('type', [
   BridgeToolErrorSchema,
   BridgeUiResizeSchema,
   BridgeApiRequestSchema,
+  BridgeOAuthRequestSchema,
 ])
 export type AppToPlatformMessage = z.infer<typeof AppToPlatformMessageSchema>
 
@@ -109,11 +123,13 @@ export const BridgeMessageSchema = z.discriminatedUnion('type', [
   BridgeToolInvokeSchema,
   BridgeDestroySchema,
   BridgeApiResponseSchema,
+  BridgeOAuthCompleteSchema,
   // App → Platform
   BridgeReadySchema,
   BridgeToolResultSchema,
   BridgeToolErrorSchema,
   BridgeUiResizeSchema,
   BridgeApiRequestSchema,
+  BridgeOAuthRequestSchema,
 ])
 export type BridgeMessage = z.infer<typeof BridgeMessageSchema>

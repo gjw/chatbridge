@@ -128,7 +128,33 @@ export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
         break
       }
 
-      case 'bridge:api:request': {
+      case 'bridge:oauth:request': {
+      // App requests an OAuth popup. Parent opens it with auth token.
+      if (!accessToken) {
+        console.warn('[AppHost] bridge:oauth:request received but no accessToken')
+        break
+      }
+      const oauthIframe = iframeRef.current
+      if (!oauthIframe) break
+
+      const serverOrigin = window.location.origin.replace(/:\d+$/, ':3100')
+      const authUrl = `${serverOrigin}/api/oauth/github/authorize?token=${encodeURIComponent(accessToken)}`
+      const popup = window.open(authUrl, 'oauth-popup', 'width=600,height=700')
+
+      // Poll for popup close, then notify the app
+      const oauthRequestId = message.requestId
+      const pollId = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(pollId)
+          postToApp(oauthIframe, {
+            type: 'bridge:oauth:complete',
+            requestId: oauthRequestId,
+          }, targetOrigin)
+        }
+      }, 500)
+      break
+    }
+    case 'bridge:api:request': {
         if (!accessToken) {
           console.warn('[AppHost] bridge:api:request received but no accessToken available')
           break

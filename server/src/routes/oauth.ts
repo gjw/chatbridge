@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { env } from '../env.js'
 import { requireAuth } from '../middleware/auth.js'
+import { verifyToken } from '../utils/jwt.js'
 import { pool } from '../db/pool.js'
 
 const router = Router()
@@ -28,16 +29,32 @@ function cleanExpiredStates(): void {
 // GET /oauth/github/authorize — start OAuth flow (requires auth)
 // ---------------------------------------------------------------------------
 
-router.get('/github/authorize', requireAuth, (req, res) => {
+// ---------------------------------------------------------------------------
+// GET /oauth/github/authorize — start OAuth flow (popup opens this directly)
+// Accepts JWT via query param since popups can't send Authorization headers.
+// ---------------------------------------------------------------------------
+
+router.get('/github/authorize', (req, res) => {
   if (!env.GITHUB_CLIENT_ID) {
     res.status(500).json({ error: 'GitHub OAuth not configured' })
+    return
+  }
+
+  // Auth via query param (popup window can't send Authorization header)
+  const token = typeof req.query.token === 'string' ? req.query.token : ''
+  let userId: string
+  try {
+    const payload = verifyToken(token)
+    userId = payload.sub
+  } catch {
+    res.status(401).send('Invalid or missing token')
     return
   }
 
   cleanExpiredStates()
 
   const state = crypto.randomBytes(20).toString('hex')
-  pendingStates.set(state, { userId: req.user!.sub, createdAt: Date.now() })
+  pendingStates.set(state, { userId, createdAt: Date.now() })
 
   const callbackUrl = `${req.protocol}://${req.get('host')}/api/oauth/github/callback`
   const params = new URLSearchParams({

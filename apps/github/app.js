@@ -28,6 +28,9 @@ window.addEventListener('message', (event) => {
     case 'bridge:api:response':
       handleApiResponse(msg)
       break
+    case 'bridge:oauth:complete':
+      handleOAuthComplete(msg)
+      break
     case 'bridge:destroy':
       resetApp()
       break
@@ -122,16 +125,45 @@ function handleApiResponse(msg) {
 // Tool: authorize_github
 // ---------------------------------------------------------------------------
 
+let pendingOAuthInvocation = null
+
+function handleOAuthComplete(msg) {
+  if (!pendingOAuthInvocation) return
+  const invocationId = pendingOAuthInvocation
+  pendingOAuthInvocation = null
+
+  // Popup closed — check if auth succeeded
+  const statusEl = document.getElementById('status')
+  checkAuthStatus().then((authorized) => {
+    if (authorized) {
+      statusEl.textContent = 'GitHub connected!'
+      resizeFrame()
+      sendResult(invocationId, { authorized: true, message: 'Successfully connected to GitHub' })
+    } else {
+      statusEl.textContent = 'Authorization was not completed.'
+      resizeFrame()
+      sendResult(invocationId, { authorized: false, message: 'User did not complete authorization' })
+    }
+  }).catch(() => {
+    statusEl.textContent = 'Failed to check authorization status.'
+    resizeFrame()
+    sendError(invocationId, 'AUTH_CHECK_FAILED', 'Could not verify authorization status')
+  })
+}
+
+async function checkAuthStatus() {
+  const serverOrigin = window.location.origin.replace(/:\d+$/, ':3100')
+  const resp = await apiRequest(serverOrigin + '/api/oauth/github/status', 'GET')
+  return resp.body && resp.body.authorized
+}
+
 async function toolAuthorizeGitHub(invocationId) {
   const statusEl = document.getElementById('status')
 
-  // First check if already authorized (via server status endpoint)
+  // First check if already authorized
   try {
-    const statusResp = await apiRequest(
-      window.location.origin.replace(/:\d+$/, ':3100') + '/api/oauth/github/status',
-      'GET',
-    )
-    if (statusResp.body && statusResp.body.authorized) {
+    const authorized = await checkAuthStatus()
+    if (authorized) {
       statusEl.textContent = 'GitHub connected!'
       resizeFrame()
       sendResult(invocationId, { authorized: true, message: 'Already connected to GitHub' })
@@ -141,7 +173,7 @@ async function toolAuthorizeGitHub(invocationId) {
     // Status check failed — proceed to auth flow
   }
 
-  // Show connect button and open OAuth popup
+  // Show connect button
   statusEl.innerHTML = '<button class="connect-btn" id="connect-btn">Connect GitHub</button><p style="margin-top:8px;color:#57606a;font-size:13px;">Click to authorize with GitHub</p>'
   resizeFrame()
 
@@ -150,40 +182,12 @@ async function toolAuthorizeGitHub(invocationId) {
     btn.disabled = true
     btn.textContent = 'Connecting...'
 
-    // Open OAuth popup — the server handles the redirect
-    const authUrl = window.location.origin.replace(/:\d+$/, ':3100') + '/api/oauth/github/authorize'
-    const popup = window.open(authUrl, 'github-oauth', 'width=600,height=700')
-
-    // Poll for auth completion
-    const pollInterval = setInterval(async () => {
-      // Check if popup was closed
-      if (popup && popup.closed) {
-        clearInterval(pollInterval)
-
-        // Check if auth succeeded
-        try {
-          const resp = await apiRequest(
-            window.location.origin.replace(/:\d+$/, ':3100') + '/api/oauth/github/status',
-            'GET',
-          )
-          if (resp.body && resp.body.authorized) {
-            statusEl.textContent = 'GitHub connected!'
-            resizeFrame()
-            sendResult(invocationId, { authorized: true, message: 'Successfully connected to GitHub' })
-          } else {
-            statusEl.textContent = 'Authorization was not completed.'
-            btn.disabled = false
-            btn.textContent = 'Connect GitHub'
-            resizeFrame()
-            sendResult(invocationId, { authorized: false, message: 'User did not complete authorization' })
-          }
-        } catch {
-          statusEl.textContent = 'Failed to check authorization status.'
-          resizeFrame()
-          sendError(invocationId, 'AUTH_CHECK_FAILED', 'Could not verify authorization status')
-        }
-      }
-    }, 1000)
+    // Ask parent to open OAuth popup (parent has the auth token)
+    pendingOAuthInvocation = invocationId
+    window.parent.postMessage({
+      type: 'bridge:oauth:request',
+      requestId: 'oauth-' + Math.random().toString(36).slice(2),
+    }, '*')
   })
 }
 
