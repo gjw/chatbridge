@@ -94,10 +94,14 @@ router.get('/:id', async (req, res, next) => {
     const { id } = ConversationIdParam.parse(req.params)
     const userId = req.user!.sub
 
+    // Teachers and admins can view any conversation (for safety review)
+    const role = req.user!.role
     const conversation = await queryOne(
       ConversationRowSchema,
-      `SELECT * FROM conversations WHERE id = $1 AND user_id = $2`,
-      [id, userId],
+      role === 'teacher' || role === 'admin'
+        ? `SELECT * FROM conversations WHERE id = $1`
+        : `SELECT * FROM conversations WHERE id = $1 AND user_id = $2`,
+      role === 'teacher' || role === 'admin' ? [id] : [id, userId],
     )
 
     const messages = await queryRows(
