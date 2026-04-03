@@ -345,6 +345,7 @@ function ServerChatPage() {
             leftSection={<IconLogout size={14} />}
             onClick={() => {
               authInfoStore.getState().logout()
+              localStorage.removeItem('chatbridge-auth')
               window.location.href = '/login'
             }}
             fullWidth
