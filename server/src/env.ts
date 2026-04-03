@@ -9,6 +9,8 @@ const EnvSchema = z.object({
   JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
   JWT_REFRESH_EXPIRES_IN: z.coerce.number().int().positive().default(604800),
   OPENAI_API_KEY: z.string().default(''),
+  GITHUB_CLIENT_ID: z.string().default(''),
+  GITHUB_CLIENT_SECRET: z.string().default(''),
 })
 
 export const env = EnvSchema.parse(process.env)

@@ -45,6 +45,7 @@ interface ActiveToolCall {
   appSlug: string
   appId: string
   appEntryUrl: string
+  trustTier: string
   rendersUi: boolean
   status: 'invoking' | 'done' | 'error'
 }
@@ -145,6 +146,7 @@ function ServerChatPage() {
         appSlug: evt.appSlug,
         appId: evt.appId,
         appEntryUrl: evt.appEntryUrl,
+        trustTier: evt.trustTier ?? 'internal',
         rendersUi: evt.rendersUi,
         status: 'invoking' as const,
       }
@@ -398,6 +400,7 @@ function ServerChatPage() {
                   ref={appHostRef}
                   appId={activeToolCall.appId}
                   entryUrl={activeToolCall.appEntryUrl}
+                  trustTier={activeToolCall.trustTier}
                   sessionId={activeId}
                   accessToken={accessToken}
                 />

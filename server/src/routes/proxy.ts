@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth.js'
 import { queryRows } from '../db/queries.js'
+import { pool } from '../db/pool.js'
 import { AppRowSchema, AppInstallationRowSchema } from '../db/schemas.js'
 
 const router = Router()
@@ -25,7 +26,7 @@ const ProxyRequestBody = z.object({
 
 router.post('/', async (req, res, next) => {
   try {
-    const { appId, url, method, headers, body } = ProxyRequestBody.parse(req.body)
+    const { appId, url, method, headers: requestHeaders, body } = ProxyRequestBody.parse(req.body)
     const userId = req.user!.sub
 
     // Verify app exists and is approved
@@ -55,6 +56,20 @@ router.post('/', async (req, res, next) => {
     if (parsedUrl.protocol !== 'https:' && parsedUrl.hostname !== 'localhost') {
       res.status(400).json({ error: 'Proxy only supports HTTPS URLs or localhost' })
       return
+    }
+
+    // For external_auth apps, inject the stored OAuth token
+    let headers: Record<string, string> | undefined = requestHeaders
+    const app = apps[0]!
+    if (app.trust_tier === 'external_auth') {
+      const tokenResult = await pool.query(
+        `SELECT access_token FROM oauth_tokens WHERE user_id = $1 AND app_id = $2`,
+        [userId, appId],
+      )
+      const tokenRow = tokenResult.rows[0] as { access_token: string } | undefined
+      if (tokenRow) {
+        headers = { ...headers, Authorization: `Bearer ${tokenRow.access_token}` }
+      }
     }
 
     // Make the proxied request

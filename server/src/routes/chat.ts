@@ -248,6 +248,7 @@ router.post('/:id/messages', async (req, res, next) => {
         appId: app.id,
         slug: app.slug,
         entryUrl: (manifest as { entryUrl?: string }).entryUrl ?? '',
+        trustTier: app.trust_tier,
         tools,
       }
     })

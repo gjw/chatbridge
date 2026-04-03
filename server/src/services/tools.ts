@@ -32,7 +32,7 @@ interface ToolSetContext {
  * 4. Logs the invocation to the database
  */
 export function buildToolSet(
-  apps: Array<{ appId: string; slug: string; entryUrl: string; tools: AppToolDef[] }>,
+  apps: Array<{ appId: string; slug: string; entryUrl: string; trustTier: string; tools: AppToolDef[] }>,
   ctx: ToolSetContext,
 ): Record<string, Tool<unknown, unknown>> {
   const toolSet: Record<string, Tool<unknown, unknown>> = {}
@@ -50,6 +50,7 @@ export function buildToolSet(
       const appId = app.appId
       const appSlug = app.slug
       const entryUrl = app.entryUrl
+      const trustTier = app.trustTier
       const rendersUi = appTool.rendersUi
       const toolName = appTool.name
 
@@ -69,6 +70,7 @@ export function buildToolSet(
             appSlug,
             appId,
             appEntryUrl: entryUrl,
+            trustTier,
             rendersUi,
           })
 

@@ -20,6 +20,8 @@ export interface AppHostProps {
   entryUrl: string
   /** Current session/conversation ID */
   sessionId: string
+  /** Trust tier of the app (determines sandbox permissions) */
+  trustTier?: string
   /** Auth token for API proxy requests */
   accessToken?: string
   /** Theme to pass to the app */
@@ -54,7 +56,7 @@ interface PendingInvocation {
 // ---------------------------------------------------------------------------
 
 export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
-  { appId, entryUrl, sessionId, accessToken, theme, onToolResult, onToolError, onReady, className },
+  { appId, entryUrl, trustTier, sessionId, accessToken, theme, onToolResult, onToolError, onReady, className },
   ref,
 ) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -263,7 +265,7 @@ export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
       <iframe
         ref={iframeRef}
         src={entryUrl}
-        sandbox="allow-scripts allow-same-origin"
+        sandbox={trustTier === 'external_auth' ? 'allow-scripts allow-same-origin allow-popups' : 'allow-scripts allow-same-origin'}
         referrerPolicy="no-referrer"
         loading="lazy"
         tabIndex={-1}
