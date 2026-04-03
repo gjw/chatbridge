@@ -486,6 +486,12 @@ K-12 is the use case. This is not an afterthought — it's load-bearing architec
 - `allow-popups` — prevents app from opening new windows
 - `allow-forms` — prevents app from submitting forms outside the iframe
 
+**Exception: `external_auth` apps** get `allow-popups` added to their sandbox so
+the platform can open OAuth consent popups on their behalf. The app itself never
+opens the popup directly — it sends a `bridge:oauth:request` message, and the
+parent (AppHost) opens the popup with the user's auth token. This keeps
+credentials out of the iframe while enabling the OAuth flow.
+
 ### Content Security Policy
 
 Server sets CSP headers:
