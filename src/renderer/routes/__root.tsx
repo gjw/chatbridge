@@ -1,4 +1,4 @@
-import { type RemoteConfig, Theme } from '@shared/types'
+import { Theme } from '@shared/types'
 import { redirect } from '@tanstack/react-router'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import Toasts from '@/components/common/Toasts'
@@ -9,7 +9,6 @@ import { useI18nEffect } from '@/hooks/useI18nEffect'
 import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'
 import { useSidebarWidth } from '@/hooks/useScreenChange'
 import useShortcut from '@/hooks/useShortcut'
-import useVersion from '@/hooks/useVersion'
 import '@/modals'
 import NiceModal from '@ebay/nice-modal-react'
 import {
@@ -43,14 +42,12 @@ import CssBaseline from '@mui/material/CssBaseline'
 import { ThemeProvider } from '@mui/material/styles'
 import { useQuery } from '@tanstack/react-query'
 import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { useEffect, useMemo, useRef } from 'react'
 import SettingsModal, { navigateToSettings } from '@/modals/Settings'
 import { prefetchModelRegistry } from '@/packages/model-registry'
 import { getOS } from '@/packages/navigator'
-import * as remote from '@/packages/remote'
 import PictureDialog from '@/pages/PictureDialog'
-import RemoteDialogWindow from '@/pages/RemoteDialogWindow'
 import SearchDialog from '@/pages/SearchDialog'
 import platform from '@/platform'
 import { router } from '@/router'
@@ -58,13 +55,10 @@ import Sidebar from '@/Sidebar'
 import storage from '@/storage'
 import * as atoms from '@/stores/atoms'
 import { useSession } from '@/stores/chatStore'
-import { initOnboardingStore, onboardingStore } from '@/stores/onboardingStore'
-import * as premiumActions from '@/stores/premiumActions'
-import * as settingActions from '@/stores/settingActions'
+import { initOnboardingStore } from '@/stores/onboardingStore'
 import { authInfoStore } from '@/stores/authInfoStore'
 import { initSettingsStore, settingsStore, useLanguage, useSettingsStore, useTheme } from '@/stores/settingsStore'
 import { useUIStore } from '@/stores/uiStore'
-import { CHATBOX_BUILD_CHANNEL, CHATBOX_BUILD_PLATFORM } from '@/variables'
 import { blobToDataUrl } from './image-creator/-components/constants'
 
 function BackgroundImageOverlay() {
@@ -132,15 +126,10 @@ function BackgroundImageOverlay() {
 }
 
 function Root() {
-  const { isExceeded, versionLoaded } = useVersion()
   const location = useLocation()
   const spellCheck = useSettingsStore((state) => state.spellCheck)
   const language = useLanguage()
   const initialized = useRef(false)
-
-  const setOpenAboutDialog = useUIStore((s) => s.setOpenAboutDialog)
-
-  const setRemoteConfig = useSetAtom(atoms.remoteConfigAtom)
 
   useEffect(() => {
     if (initialized.current) {
@@ -151,50 +140,16 @@ function Root() {
       // Wait for stores to hydrate from persistent storage
       await Promise.all([initSettingsStore(), initOnboardingStore()])
       void prefetchModelRegistry()
-
-      const remoteConfig = await remote
-        .getRemoteConfig('setting_chatboxai_first')
-        .catch(() => ({ setting_chatboxai_first: false }) as RemoteConfig)
-      setRemoteConfig(async (prev) => ({ ...(await prev), ...remoteConfig }))
-
-      // Skip guide-related checks if already on guide or settings/mcp page
-      if (location.pathname === '/guide' || location.pathname === '/settings/mcp') {
-        initialized.current = true
-        return
-      }
-
-      // On store builds (iOS / Google Play), wait for version to load before making guide/navigation decisions.
-      // Without this, isExceeded is initially false (version not yet loaded),
-      // which would incorrectly navigate to the guide during store review.
-      const isStoreReviewPlatform =
-        CHATBOX_BUILD_PLATFORM === 'ios' ||
-        (CHATBOX_BUILD_PLATFORM === 'android' && CHATBOX_BUILD_CHANNEL === 'google_play')
-      if (isStoreReviewPlatform && !versionLoaded) {
-        return
-      }
-
       initialized.current = true
-
-      // Check if user needs onboarding guide
-      // Conditions: not completed onboarding AND no valid config
-      const onboardingCompleted = onboardingStore.getState().completed
-      const needsSetup = settingActions.needEditSetting()
-
-      // Skip old Chatbox onboarding — ChatBridge has its own auth flow
-      // if (!isExceeded && !onboardingCompleted && needsSetup) {
-      //   router.navigate({ to: '/guide', replace: true })
-      //   return
-      // }
-
-      // 是否需要弹出关于窗口（更新后首次启动）
-      // 目前仅在桌面版本更新后首次启动、且网络环境为"外网"的情况下才自动弹窗
-      const shouldShowAboutDialogWhenStartUp = await platform.shouldShowAboutDialogWhenStartUp()
-      if (shouldShowAboutDialogWhenStartUp && remoteConfig.setting_chatboxai_first) {
-        setOpenAboutDialog(true)
-        return
-      }
     })()
-  }, [setOpenAboutDialog, setRemoteConfig, location.pathname, isExceeded, versionLoaded])
+  }, [])
+
+  // Hide old Chatbox sidebar on ChatBridge pages (they have their own navigation)
+  const isChatBridgePage =
+    location.pathname.startsWith('/server-chat') ||
+    location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/login') ||
+    location.pathname.startsWith('/register')
 
   const showSidebar = useUIStore((s) => s.showSidebar)
   const sidebarWidth = useSidebarWidth()
@@ -258,12 +213,12 @@ function Root() {
       <BackgroundImageOverlay />
       {platform.type === 'desktop' && (getOS() === 'Windows' || getOS() === 'Linux') && <ExitFullscreenButton />}
       <Grid container className="h-full relative z-[1]">
-        <Sidebar />
+        {!isChatBridgePage && <Sidebar />}
         <Box
           className="h-full w-full"
           sx={{
             flexGrow: 1,
-            ...(showSidebar
+            ...(!isChatBridgePage && showSidebar
               ? language === 'ar'
                 ? { paddingRight: { sm: `${sidebarWidth}px` } }
                 : { paddingLeft: { sm: `${sidebarWidth}px` } }
@@ -293,8 +248,6 @@ function Root() {
       {/* <OpenAttachLinkDialog /> */}
       {/* 图片预览 */}
       <PictureDialog />
-      {/* 似乎是从后端拉一个弹窗的配置 */}
-      <RemoteDialogWindow />
       {/* 手机端举报内容 */}
       {/* <ReportContentDialog /> */}
       {/* 搜索 */}
@@ -594,7 +547,6 @@ export const Route = createRootRoute({
   },
   component: () => {
     useI18nEffect()
-    premiumActions.useAutoValidate() // 每次启动都执行 license 检查，防止用户在lemonsqueezy管理页面中取消了当前设备的激活
     useSystemLanguageWhenInit()
     useShortcut()
     const theme = useAppTheme()
