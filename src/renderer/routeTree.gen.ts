@@ -13,8 +13,6 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as ServerChatImport } from './routes/server-chat'
 import { Route as RegisterImport } from './routes/register'
-import { Route as AdminAppsImport } from './routes/admin/apps'
-import { Route as AdminSafetyImport } from './routes/admin/safety'
 import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
 import { Route as SettingsRouteImport } from './routes/settings/route'
@@ -44,6 +42,8 @@ import { Route as DevContextGeneratorImport } from './routes/dev/context-generat
 import { Route as CopilotsSearchImport } from './routes/copilots/search'
 import { Route as CopilotsMyImport } from './routes/copilots/my'
 import { Route as CopilotsFeaturedImport } from './routes/copilots/featured'
+import { Route as AdminSafetyImport } from './routes/admin/safety'
+import { Route as AdminAppsImport } from './routes/admin/apps'
 import { Route as SettingsProviderRouteImport } from './routes/settings/provider/route'
 import { Route as SettingsProviderIndexImport } from './routes/settings/provider/index'
 import { Route as SettingsProviderProviderIdImport } from './routes/settings/provider/$providerId'
@@ -54,18 +54,6 @@ import { Route as SettingsProviderChatboxAiIndexImport } from './routes/settings
 const ServerChatRoute = ServerChatImport.update({
   id: '/server-chat',
   path: '/server-chat',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const AdminAppsRoute = AdminAppsImport.update({
-  id: '/admin/apps',
-  path: '/admin/apps',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const AdminSafetyRoute = AdminSafetyImport.update({
-  id: '/admin/safety',
-  path: '/admin/safety',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -249,6 +237,18 @@ const CopilotsFeaturedRoute = CopilotsFeaturedImport.update({
   getParentRoute: () => CopilotsRouteRoute,
 } as any)
 
+const AdminSafetyRoute = AdminSafetyImport.update({
+  id: '/admin/safety',
+  path: '/admin/safety',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AdminAppsRoute = AdminAppsImport.update({
+  id: '/admin/apps',
+  path: '/admin/apps',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const SettingsProviderRouteRoute = SettingsProviderRouteImport.update({
   id: '/provider',
   path: '/provider',
@@ -336,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServerChatImport
       parentRoute: typeof rootRoute
     }
+    '/settings/provider': {
+      id: '/settings/provider'
+      path: '/provider'
+      fullPath: '/settings/provider'
+      preLoaderRoute: typeof SettingsProviderRouteImport
+      parentRoute: typeof SettingsRouteImport
+    }
     '/admin/apps': {
       id: '/admin/apps'
       path: '/admin/apps'
@@ -349,13 +356,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/safety'
       preLoaderRoute: typeof AdminSafetyImport
       parentRoute: typeof rootRoute
-    }
-    '/settings/provider': {
-      id: '/settings/provider'
-      path: '/provider'
-      fullPath: '/settings/provider'
-      preLoaderRoute: typeof SettingsProviderRouteImport
-      parentRoute: typeof SettingsRouteImport
     }
     '/copilots/featured': {
       id: '/copilots/featured'
@@ -639,7 +639,10 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/server-chat': typeof ServerChatRoute
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/admin/apps': typeof AdminAppsRoute
+  '/admin/safety': typeof AdminSafetyRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
   '/copilots/search': typeof CopilotsSearchRoute
@@ -673,6 +676,9 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/server-chat': typeof ServerChatRoute
+  '/admin/apps': typeof AdminAppsRoute
+  '/admin/safety': typeof AdminSafetyRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
   '/copilots/search': typeof CopilotsSearchRoute
@@ -710,7 +716,10 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/server-chat': typeof ServerChatRoute
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/admin/apps': typeof AdminAppsRoute
+  '/admin/safety': typeof AdminSafetyRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
   '/copilots/search': typeof CopilotsSearchRoute
@@ -749,7 +758,10 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/register'
+    | '/server-chat'
     | '/settings/provider'
+    | '/admin/apps'
+    | '/admin/safety'
     | '/copilots/featured'
     | '/copilots/my'
     | '/copilots/search'
@@ -782,6 +794,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/register'
+    | '/server-chat'
+    | '/admin/apps'
+    | '/admin/safety'
     | '/copilots/featured'
     | '/copilots/my'
     | '/copilots/search'
@@ -817,7 +832,10 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/register'
+    | '/server-chat'
     | '/settings/provider'
+    | '/admin/apps'
+    | '/admin/safety'
     | '/copilots/featured'
     | '/copilots/my'
     | '/copilots/search'
@@ -965,6 +983,12 @@ export const routeTree = rootRoute
         "/settings/provider/",
         "/settings/provider/chatbox-ai/"
       ]
+    },
+    "/admin/apps": {
+      "filePath": "admin/apps.tsx"
+    },
+    "/admin/safety": {
+      "filePath": "admin/safety.tsx"
     },
     "/copilots/featured": {
       "filePath": "copilots/featured.tsx",
