@@ -303,8 +303,8 @@ an app after 3 failures in 5 minutes. Graceful error messages back to the LLM.
 \textbf{App} & \textbf{Trust Tier} & \textbf{Auth} & \textbf{Demonstrates} \\
 \midrule
 Chess & Internal & None & Complex bidirectional state, ongoing interaction \\
-Weather & External Public & Server-held API key & Simple tool $\rightarrow$ UI $\rightarrow$ result \\
-Spotify/GitHub & External Auth & OAuth2 (proxied) & Full auth flow, token custody \\
+Wordle & External Public & Proxied dictionary API & Word validation via \texttt{bridge:api:request}, session game \\
+Vocab Quiz & Internal & None & Educational content delivery, LLM-mediated Q\&A \\
 \bottomrule
 \end{tabularx}
 
@@ -327,5 +327,130 @@ in the architecture prevents adding a managed, fully-audited hosting tier later-
 trust tier system is designed to extend. ChatBridge starts as something any school can
 stand up. A SaaS vendor can build an enterprise version with per-district plugin
 verification on top of the same architecture.
+
+% ─── Constraints ───────────────────────────────────────
+\section*{Constraints}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Constraint} & \textbf{Impact} \\
+\midrule
+Solo + AI agents & One person coordinating multiple Claude Code instances. Tasks must be agent-sized (3--8 files, one concern, clear entry/exit). No pair programming. \\
+One-week sprint & Scope must be ruthlessly vertical. Ship working slices, not horizontal layers. \\
+Fork of Chatbox & Inherit React 18, Mantine, Vite, Zustand/Jotai. Can't choose the frontend stack---must strip Electron and build on what's there. \\
+K-12 audience & Trust \& safety is load-bearing architecture, not a feature. Content filtering, audit logging, and teacher controls are on the critical path, not nice-to-haves. \\
+Small-school target & Can't assume enterprise infra: no signing pipelines, no CDN, no dedicated IT staff. Must work on a single VPS. \\
+\bottomrule
+\end{tabularx}
+
+% ─── Alternatives Considered ──────────────────────────
+\section*{Alternatives Considered}
+
+\subsection*{App Sandbox: Iframes vs.\ Web Components vs.\ Server-Side Rendering}
+
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{Option} & \textbf{Isolation} & \textbf{Assessment} \\
+\midrule
+\textbf{Iframes} {\color{cbgreen}(chosen)} & Process-level & Real security boundary. \texttt{sandbox} attribute strips DOM access, navigation, popups. Only option that provides actual isolation for K-12. \\
+Web Components & DOM-level & Shadow DOM is encapsulation, not security. A malicious component can still access \texttt{window}, \texttt{document}, cookies. Insufficient for children's product. \\
+Server-side render & Full & App runs on server, sends HTML. Maximum control but kills interactivity (chess board, real-time games). Latency on every interaction. \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{App Hosting: External vs.\ Managed}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Option} & \textbf{Assessment} \\
+\midrule
+\textbf{External iframes} {\color{cbgreen}(chosen)} & Apps hosted by developers, loaded via iframe. Platform controls access through curated registry, sandbox, CSP. Any school can deploy without signing infrastructure. Any developer can build an app. \textbf{Risk:} approved app can change after approval. \textbf{Mitigation:} runtime enforcement + instant suspend. \\
+Signed/managed & Apps audited, signed, served from platform CDN. Guarantees content integrity. Requires review pipeline, hosting infra, and ongoing labor that small schools can't provide. Kills third-party adoption. \\
+\bottomrule
+\end{tabularx}
+
+\noindent\textit{Nothing in the architecture prevents adding a managed tier later---the trust tier system is designed to extend. We start accessible.}
+
+\subsection*{Content Filtering: Keywords vs.\ Classifier vs.\ Tiered}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Option} & \textbf{Assessment} \\
+\midrule
+Keywords only & Fast, cheap, no false positives on exact matches. Misses intent entirely. ``I want to die'' vs ``I want to die laughing.'' Unacceptable for K-12. \\
+Classifier only & Understands intent but adds latency (\textasciitilde50ms) and cost to every message. Overkill for obvious profanity. \\
+\textbf{Tiered pipeline} {\color{cbgreen}(chosen)} & Keywords first (<1ms), classifier second (only when needed), full review third (only when uncertain). Each tier catches what the previous misses. Cost scales with risk, not volume. \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{LLM Integration: Client-Side vs.\ Server-Mediated}
+
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Option} & \textbf{Assessment} \\
+\midrule
+Client-side (Chatbox default) & User configures API key, calls go direct. No content filtering possible, no audit trail, no mandatory system prompt. Chatbox trusts the user---but our users are children. \\
+\textbf{Server-mediated} {\color{cbgreen}(chosen)} & All LLM calls through Express backend. Enables mandatory safety middleware, tool pipeline orchestration, audit logging, cost tracking. The server is the brain; the frontend is a thin streaming client. \\
+\bottomrule
+\end{tabularx}
+
+% ─── Build Order ──────────────────────────────────────
+\section*{Build Order \& Timeline}
+
+One-week sprint. Solo developer with AI coding agents running in parallel.
+
+\begin{enumerate}
+  \item \textbf{Day 1 (Mon):} Fork Chatbox, strip Electron. Scaffold Express backend, PostgreSQL schema, shared types. Three agents in parallel.
+  \item \textbf{Day 2 (Tue):} User auth (JWT). Chat API with streaming. Content safety middleware. Presearch document + architecture video.
+  \item \textbf{Day 3 (Wed):} App registry + manifest validation. Bridge protocol + iframe host. Tool pipeline integration---\textit{the crux}, where all three subsystems meet.
+  \item \textbf{Day 4 (Thu):} Chess app (required). Second app. Third app. Deploy to Linode. Early submission.
+  \item \textbf{Day 5--7 (Fri--Sun):} OAuth app, conversation summaries (Loop C seed), developer docs, polish, final submission.
+\end{enumerate}
+
+\noindent\textbf{Critical path:} Fork $\rightarrow$ Server + DB + Types (parallel) $\rightarrow$ Auth + Chat API $\rightarrow$ Safety + Registry + Bridge (parallel) $\rightarrow$ Tool Pipeline $\rightarrow$ Apps (parallel).
+
+\noindent\textbf{Parallelization:} After the tool pipeline integrates, all apps and deployment can run simultaneously in separate agent sessions.
+
+% ─── Risk Analysis ────────────────────────────────────
+\section*{Risk Analysis}
+
+\begin{tabularx}{\textwidth}{X c X}
+\toprule
+\textbf{Risk} & \textbf{Severity} & \textbf{Mitigation} \\
+\midrule
+LLM ignores tools and fabricates game results instead of calling app & High & Strong system prompt with explicit tool routing per app. Idempotent \texttt{start\_game} guards prevent state resets. Larger models far more reliable than mini. \\
+\addlinespace
+Iframe renders inappropriate visual content that platform cannot inspect & Medium & Curated registry with teacher approval gate. Iframe CSP restricts loadable resources. Report + instant platform-wide suspend. \\
+\addlinespace
+Context window overflow in long multi-app conversations & Medium & \texttt{stepCountIs(5)} limits tool rounds per message. Context builder manages schema injection. Future: conversation compaction. \\
+\addlinespace
+Approved app changes behavior after approval (supply chain) & Medium & Runtime enforcement: sandbox + content filter on all tool results before LLM context. Instant suspend on report. Trust tier system extensible to managed hosting. \\
+\addlinespace
+One-week timeline for full-stack platform & High & Vertical slices over horizontal layers. Ship working chat + one app before adding more. AI agent parallelization on clean module seams. \\
+\bottomrule
+\end{tabularx}
+
+% ─── Validation Plan ──────────────────────────────────
+\section*{Validation \& Testing Plan}
+
+Seven scenarios from the PRD, mapped to verification approach:
+
+\begin{tabularx}{\textwidth}{r X l}
+\toprule
+\textbf{\#} & \textbf{Scenario} & \textbf{Method} \\
+\midrule
+1 & Tool discovery and invocation & Live demo: ``let's play chess'' \\
+2 & App UI renders in chat & Live demo: board/quiz card appears \\
+3 & User interacts, completion signaling & Live demo: moves/guesses via bridge \\
+4 & Context retention after app interaction & Ask ``what did I get wrong?'' \\
+5 & Switch between multiple apps & Wordle $\rightarrow$ Quiz in one conversation \\
+6 & Ambiguous routing accuracy & Natural language $\rightarrow$ correct app \\
+7 & Refuses to invoke for unrelated queries & Normal question gets text answer \\
+\bottomrule
+\end{tabularx}
+
+\noindent\textbf{Safety validation:} Type flagged content as student, verify real-time appearance on teacher safety dashboard with correct severity classification. Test keyword tier (profanity) and classifier tier (threats without keywords) independently.
+
+\noindent\textbf{Observability:} Every tool invocation logged to \texttt{tool\_invocations} table with parameters, result, status, and duration. Content filter matches logged to \texttt{content\_filter\_log} with severity, source, and matched words. Teacher dashboard provides runtime verification.
 
 \end{document}
