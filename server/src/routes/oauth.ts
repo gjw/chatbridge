@@ -8,6 +8,12 @@ import { pool } from '../db/pool.js'
 
 const router = Router()
 
+/** Get the public base URL, respecting X-Forwarded-Proto from nginx */
+function getBaseUrl(req: import('express').Request): string {
+  const proto = req.get('x-forwarded-proto') ?? req.protocol
+  return `${proto}://${req.get('host')}`
+}
+
 // ---------------------------------------------------------------------------
 // In-memory state store for OAuth CSRF protection (state → userId + provider)
 // Entries expire after 10 minutes.
@@ -48,7 +54,7 @@ router.get('/github/authorize', (req, res) => {
   const state = crypto.randomBytes(20).toString('hex')
   pendingStates.set(state, { userId, provider: 'github', createdAt: Date.now() })
 
-  const callbackUrl = `${req.protocol}://${req.get('host')}/api/oauth/github/callback`
+  const callbackUrl = `${getBaseUrl(req)}/api/oauth/github/callback`
   const params = new URLSearchParams({
     client_id: env.GITHUB_CLIENT_ID,
     redirect_uri: callbackUrl,
@@ -131,7 +137,7 @@ router.get('/google/authorize', (req, res) => {
   const state = crypto.randomBytes(20).toString('hex')
   pendingStates.set(state, { userId, provider: 'google', createdAt: Date.now() })
 
-  const callbackUrl = `${req.protocol}://${req.get('host')}/api/oauth/google/callback`
+  const callbackUrl = `${getBaseUrl(req)}/api/oauth/google/callback`
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID,
     redirect_uri: callbackUrl,
@@ -160,7 +166,7 @@ router.get('/google/callback', async (req, res, next) => {
       return
     }
 
-    const callbackUrl = `${req.protocol}://${req.get('host')}/api/oauth/google/callback`
+    const callbackUrl = `${getBaseUrl(req)}/api/oauth/google/callback`
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
