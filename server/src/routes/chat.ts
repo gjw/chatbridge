@@ -302,7 +302,7 @@ Once an app session is active, ALL user messages relate to that app until they e
 
 MANDATORY: You MUST call the appropriate tool for EVERY action. NEVER fabricate results.
 - Quiz: ALWAYS call check_answer when the student answers. You do NOT know the correct answers — only the tool does.
-- Google Quiz: ALWAYS call google-quiz__check_answer when the student answers. You do NOT know the correct answers — only the tool does.
+- Google Quiz: ALWAYS call google-quiz__check_answer when the student answers. The tool returns both the student's answer and the correct definition. YOU must grade it — accept answers that demonstrate understanding of the concept, even if the wording differs from the exact definition. Students are learning, not doing regex matching. "when a plant converts light into energy" is correct for "Process by which plants convert light energy into chemical energy."
 - Wordle: ALWAYS call guess_word for every guess. You do NOT know the target word — only the tool does.
 - Chess: ALWAYS call move_piece for moves. Never draw ASCII boards.
 - Keep text responses brief — the visual app is the primary interface.`,
