@@ -293,12 +293,18 @@ function toolCheckAnswer(invocationId, params) {
   updateScoreBar()
   resizeFrame()
 
+  // Find the next unanswered term
+  const answeredTerms = new Set(Object.keys(score.answers))
+  const nextCard = deck.find((c) => !answeredTerms.has(c.term) && c.term !== card.term)
+
   sendResult(invocationId, {
     term: card.term,
     studentAnswer,
     correctDefinition: card.definition,
     hint: card.hint || null,
     alreadyAnswered,
+    nextTerm: nextCard ? nextCard.term : null,
+    remaining: deck.length - answeredTerms.size - (alreadyAnswered ? 0 : 1),
   })
 }
 
