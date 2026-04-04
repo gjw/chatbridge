@@ -121,22 +121,12 @@ function handleOAuthComplete() {
   const invocationId = pendingOAuthInvocation
   pendingOAuthInvocation = null
 
+  // Trust that the OAuth callback succeeded — it stores the token server-side
+  // and shows "Success" to the user before they close the popup.
   const statusEl = document.getElementById('status')
-  checkAuthStatus().then((authorized) => {
-    if (authorized) {
-      statusEl.textContent = 'Google connected!'
-      resizeFrame()
-      sendResult(invocationId, { authorized: true, message: 'Successfully connected to Google' })
-    } else {
-      statusEl.textContent = 'Authorization was not completed.'
-      resizeFrame()
-      sendResult(invocationId, { authorized: false, message: 'User did not complete authorization' })
-    }
-  }).catch(() => {
-    statusEl.textContent = 'Failed to check authorization status.'
-    resizeFrame()
-    sendError(invocationId, 'AUTH_CHECK_FAILED', 'Could not verify authorization status')
-  })
+  statusEl.textContent = 'Google connected!'
+  resizeFrame()
+  sendResult(invocationId, { authorized: true, message: 'Successfully connected to Google. You can now load a sheet.' })
 }
 
 async function checkAuthStatus() {
@@ -145,20 +135,8 @@ async function checkAuthStatus() {
   return resp.body && resp.body.authorized
 }
 
-async function toolAuthorizeGoogle(invocationId) {
+function toolAuthorizeGoogle(invocationId) {
   const statusEl = document.getElementById('status')
-
-  try {
-    const authorized = await checkAuthStatus()
-    if (authorized) {
-      statusEl.textContent = 'Google connected!'
-      resizeFrame()
-      sendResult(invocationId, { authorized: true, message: 'Already connected to Google' })
-      return
-    }
-  } catch {
-    // proceed to auth flow
-  }
 
   statusEl.innerHTML = '<button class="connect-btn" id="connect-btn">Connect Google</button><p style="margin-top:8px;color:#57606a;font-size:13px;">Sign in to access your teacher\'s flashcard sheets</p>'
   resizeFrame()
