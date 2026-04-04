@@ -84,11 +84,14 @@ node server/dist/db/seed.js
 
 ## 7. Serve the app
 
+**Production:** Nothing to do. Nginx already serves `apps/google-quiz/` as static
+files, same as chess/wordle/quiz. Just pull the code, re-seed, and bounce PM2.
+
+**Local dev only:**
+
 ```bash
 npx serve apps/google-quiz -l 3205
 ```
-
-In production this is handled by the static file serving in the deploy config.
 
 ## 8. Create a test flashcard sheet
 
