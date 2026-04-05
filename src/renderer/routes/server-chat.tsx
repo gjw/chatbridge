@@ -432,6 +432,14 @@ function ServerChatPage() {
                     </Text>
                   </Paper>
                 ))}
+                {activeToolCall?.status === 'invoking' && (
+                  <Group gap="xs" p="sm">
+                    <Loader size="xs" />
+                    <Text size="sm" c="dimmed">
+                      Using {activeToolCall.appSlug}…
+                    </Text>
+                  </Group>
+                )}
               </Stack>
             </ScrollArea>
 
