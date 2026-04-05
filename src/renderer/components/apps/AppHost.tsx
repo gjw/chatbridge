@@ -292,7 +292,7 @@ export const AppHost = forwardRef<AppHostHandle, AppHostProps>(function AppHost(
       <iframe
         ref={iframeRef}
         src={entryUrl}
-        sandbox={trustTier === 'external_auth' ? 'allow-scripts allow-same-origin allow-popups' : 'allow-scripts allow-same-origin'}
+        sandbox={trustTier === 'external_auth' ? 'allow-scripts allow-popups' : 'allow-scripts'}
         referrerPolicy="no-referrer"
         loading="lazy"
         tabIndex={-1}
