@@ -22,7 +22,7 @@ import {
   IconTrash,
   IconUsers,
 } from '@tabler/icons-react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from '@/lib/api'
 import type { Conversation, ConversationWithMessages, SseEvent } from '@/lib/api'
@@ -35,6 +35,12 @@ export const Route = createFileRoute('/server-chat')({
   validateSearch: (search: Record<string, unknown>) => ({
     conv: typeof search.conv === 'string' ? search.conv : undefined,
   }),
+  beforeLoad: () => {
+    const token = authInfoStore.getState().accessToken
+    if (!token) {
+      throw redirect({ to: '/login' })
+    }
+  },
 })
 
 // ---------------------------------------------------------------------------

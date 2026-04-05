@@ -15,15 +15,18 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { IconPlus, IconRefresh, IconTrash } from '@tabler/icons-react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import * as api from '@/lib/api'
 import type { FilterLogEntry, BlocklistWord } from '@/lib/api'
-import { useAuthInfoStore } from '@/stores/authInfoStore'
+import { authInfoStore, useAuthInfoStore } from '@/stores/authInfoStore'
 import { AdminNav } from '@/components/admin/AdminNav'
 
 export const Route = createFileRoute('/admin/safety')({
   component: SafetyDashboard,
+  beforeLoad: () => {
+    if (!authInfoStore.getState().accessToken) throw redirect({ to: '/login' })
+  },
 })
 
 function SafetyDashboard() {

@@ -6,15 +6,18 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import * as api from '@/lib/api'
 import type { UserListEntry } from '@/lib/api'
-import { useAuthInfoStore } from '@/stores/authInfoStore'
+import { authInfoStore, useAuthInfoStore } from '@/stores/authInfoStore'
 import { AdminNav } from '@/components/admin/AdminNav'
 
 export const Route = createFileRoute('/admin/users')({
   component: UsersPage,
+  beforeLoad: () => {
+    if (!authInfoStore.getState().accessToken) throw redirect({ to: '/login' })
+  },
 })
 
 function UsersPage() {
