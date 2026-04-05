@@ -466,6 +466,7 @@ function ServerChatPage() {
                   App: {activeToolCall.appSlug}
                 </Text>
                 <AppHost
+                  key={activeToolCall.appId}
                   ref={appHostRef}
                   appId={activeToolCall.appId}
                   entryUrl={activeToolCall.appEntryUrl}
