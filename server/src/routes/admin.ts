@@ -52,8 +52,7 @@ router.get('/activity', async (req, res, next) => {
       conditions.push(`EXISTS (
         SELECT 1 FROM tool_invocations ti2
         JOIN apps a2 ON ti2.app_id = a2.id
-        JOIN messages m2 ON ti2.message_id = m2.id
-        WHERE m2.conversation_id = c.id AND a2.slug = $${String(params.length)}
+        WHERE ti2.user_id = c.user_id AND a2.slug = $${String(params.length)}
       )`)
     }
 
@@ -75,7 +74,7 @@ router.get('/activity', async (req, res, next) => {
       FROM conversations c
       JOIN users u ON c.user_id = u.id
       LEFT JOIN messages m ON m.conversation_id = c.id
-      LEFT JOIN tool_invocations ti ON ti.message_id = m.id
+      LEFT JOIN tool_invocations ti ON ti.user_id = c.user_id
       LEFT JOIN apps a ON ti.app_id = a.id
       ${where}
       GROUP BY c.id, u.name, u.email
