@@ -4,7 +4,7 @@ import type { Response as ExpressResponse } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { queryRows, queryOne, execute } from '../db/queries.js'
 import { ConversationRowSchema, MessageRowSchema, AppRowSchema } from '../db/schemas.js'
-import { createSafeLLM, streamText } from '../services/llm.js'
+import { createSafeLLM, streamText, generateTitle } from '../services/llm.js'
 import { stepCountIs } from 'ai'
 import { buildToolSet } from '../services/tools.js'
 import { submitResult as submitToolResult } from '../services/toolCalls.js'
@@ -138,6 +138,40 @@ router.delete('/:id', async (req, res, next) => {
     }
 
     res.status(204).end()
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// PATCH /conversations/:id — update conversation (title)
+// ---------------------------------------------------------------------------
+
+const UpdateConversationBody = z.object({
+  title: z.string().min(1).max(200),
+})
+
+router.patch('/:id', async (req, res, next) => {
+  try {
+    const { id } = ConversationIdParam.parse(req.params)
+    const { title } = UpdateConversationBody.parse(req.body)
+    const userId = req.user!.sub
+    const role = req.user!.role
+
+    // Owner or teacher/admin can update
+    const count = await execute(
+      role === 'teacher' || role === 'admin'
+        ? `UPDATE conversations SET title = $1, updated_at = now() WHERE id = $2`
+        : `UPDATE conversations SET title = $1, updated_at = now() WHERE id = $2 AND user_id = $3`,
+      role === 'teacher' || role === 'admin' ? [title, id] : [title, id, userId],
+    )
+
+    if (count === 0) {
+      res.status(404).json({ error: 'Conversation not found' })
+      return
+    }
+
+    res.json({ id, title })
   } catch (err) {
     next(err)
   }
@@ -371,6 +405,26 @@ MANDATORY: You MUST call the appropriate tool for EVERY action. NEVER fabricate 
       `UPDATE conversations SET updated_at = now() WHERE id = $1`,
       [conversationId],
     )
+
+    // 12. Auto-generate title for new conversations (async, don't block response)
+    const conv = await queryOne(
+      ConversationRowSchema,
+      `SELECT * FROM conversations WHERE id = $1`,
+      [conversationId],
+    )
+    if (conv.title === 'New Chat' && fullText.length > 0) {
+      void generateTitle(content, fullText).then(async (title) => {
+        if (title) {
+          await execute(
+            `UPDATE conversations SET title = $1 WHERE id = $2`,
+            [title, conversationId],
+          )
+          console.info('[chat] Auto-titled conversation:', conversationId, title)
+        }
+      }).catch((err: unknown) => {
+        console.error('[chat] Title generation failed:', err)
+      })
+    }
 
     res.end()
   } catch (err) {

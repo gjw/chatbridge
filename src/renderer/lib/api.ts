@@ -138,6 +138,15 @@ export async function deleteConversation(token: string, id: string) {
   })
 }
 
+export async function updateConversation(token: string, id: string, title: string) {
+  const raw = await authedFetch(`/api/conversations/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: { title },
+  })
+  return raw as { id: string; title: string }
+}
+
 /**
  * Send a message and return an SSE event source.
  * Yields parsed SSE data objects as they arrive.

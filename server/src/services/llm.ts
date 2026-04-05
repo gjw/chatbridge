@@ -1,5 +1,5 @@
 import { openai } from '@ai-sdk/openai'
-import { streamText, wrapLanguageModel, type LanguageModelMiddleware } from 'ai'
+import { generateText, streamText, wrapLanguageModel, type LanguageModelMiddleware } from 'ai'
 import type { LanguageModelV3, LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import {
   filterText,
@@ -172,6 +172,29 @@ export function createSafeLLM(modelId = 'gpt-5.4'): LanguageModelV3 {
     model: baseModel,
     middleware: MIDDLEWARE_STACK,
   })
+}
+
+/**
+ * Generate a short conversation title from the first exchange.
+ * Uses a cheap model to minimize cost.
+ */
+export async function generateTitle(userMessage: string, assistantResponse: string): Promise<string | null> {
+  try {
+    const model = openai('gpt-4o-mini')
+    const result = await generateText({
+      model,
+      system: 'Generate a conversation title in 5 words or fewer. Reply with ONLY the title, no quotes or punctuation.',
+      messages: [
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: assistantResponse.slice(0, 200) },
+      ],
+    })
+    const title = result.text.trim()
+    return title.length > 0 ? title : null
+  } catch (err) {
+    console.error('[llm] Title generation error:', err)
+    return null
+  }
 }
 
 export { streamText }

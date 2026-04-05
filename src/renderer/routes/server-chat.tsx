@@ -289,6 +289,8 @@ function ServerChatPage() {
       // Don't clear activeToolCall here — keep iframe visible
       abortRef.current = null
       void loadConversations()
+      // Re-fetch after delay to pick up auto-generated title
+      setTimeout(() => void loadConversations(), 3000)
       inputRef.current?.focus()
     }
   }
