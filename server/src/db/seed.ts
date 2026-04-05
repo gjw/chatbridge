@@ -67,12 +67,18 @@ async function seed(): Promise<void> {
 
   // In production, rewrite entryUrl to use the public base URL
   if (baseUrl) {
-    chessManifest.entryUrl = `${baseUrl}/apps/chess/`
-    wordleManifest.entryUrl = `${baseUrl}/apps/wordle/`
-    quizManifest.entryUrl = `${baseUrl}/apps/quiz/`
-    githubManifest.entryUrl = `${baseUrl}/apps/github/`
-    googleQuizManifest.entryUrl = `${baseUrl}/apps/google-quiz/`
-    console.info(`  App URLs rewritten to ${baseUrl}/apps/...`)
+    // APP_BASE_URL may or may not include /apps/ path depending on hosting setup.
+    // If it's a dedicated asset domain (e.g. cb-assets.foramerica.dev), apps are
+    // served at the root: /chess/, /quiz/, etc.
+    // If it's the main domain, apps are under /apps/chess/, /apps/quiz/, etc.
+    const hasAppsPath = baseUrl.includes('/apps') ? '' : ''
+    const appPath = (slug: string) => `${baseUrl}/${slug}/`
+    chessManifest.entryUrl = appPath('chess')
+    wordleManifest.entryUrl = appPath('wordle')
+    quizManifest.entryUrl = appPath('quiz')
+    githubManifest.entryUrl = appPath('github')
+    googleQuizManifest.entryUrl = appPath('google-quiz')
+    console.info(`  App URLs rewritten to ${baseUrl}/...`)
   }
 
   const chessResult = await pool.query(
