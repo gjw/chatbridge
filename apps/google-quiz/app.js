@@ -1,6 +1,7 @@
-// Google Sheets Vocab Quiz — ChatBridge App (external_auth tier)
-// Pulls flashcard decks from Google Sheets. Teachers create content in Sheets,
-// students study here with LLM tutoring.
+// Google Sheets Vocab Quiz — State-machine next_turn pattern
+// App is the state machine. LLM is a stateless judge.
+// Flow: authorize_google → load_deck → next_turn loop
+// States (after deck loaded): awaiting_answer → awaiting_judgment → (loop or complete)
 
 // ---------------------------------------------------------------------------
 // State
@@ -9,7 +10,10 @@
 let appId = null
 let sessionId = null
 let deck = []        // Array of { term, definition, hint }
-let score = { correct: 0, incorrect: 0, answers: {} }
+let currentIndex = 0
+let results = []     // Array of { term, definition, studentAnswer, isCorrect }
+let appState = 'no_deck' // no_deck | awaiting_answer | awaiting_judgment | complete
+let pendingStudentAnswer = ''
 let googleAuthorized = false
 
 // ---------------------------------------------------------------------------
@@ -54,11 +58,8 @@ function handleToolInvoke(msg) {
     case 'load_deck':
       toolLoadDeck(invocationId, parameters)
       break
-    case 'check_answer':
-      toolCheckAnswer(invocationId, parameters)
-      break
-    case 'get_score':
-      sendResult(invocationId, getScoreData())
+    case 'next_turn':
+      handleNextTurn(invocationId, parameters || {})
       break
     default:
       sendError(invocationId, 'UNKNOWN_TOOL', `Unknown tool: ${toolName}`)
@@ -112,7 +113,7 @@ function handleApiResponse(msg) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool: authorize_google
+// Tool: authorize_google (unchanged)
 // ---------------------------------------------------------------------------
 
 let pendingOAuthInvocation = null
@@ -122,19 +123,11 @@ function handleOAuthComplete() {
   const invocationId = pendingOAuthInvocation
   pendingOAuthInvocation = null
 
-  // Trust that the OAuth callback succeeded — it stores the token server-side
-  // and shows "Success" to the user before they close the popup.
   const statusEl = document.getElementById('status')
   googleAuthorized = true
   statusEl.textContent = 'Google connected!'
   resizeFrame()
   sendResult(invocationId, { authorized: true, message: 'Successfully connected to Google. You can now load a sheet.' })
-}
-
-async function checkAuthStatus() {
-  const serverOrigin = window.location.origin.replace(/:\d+$/, ':3100')
-  const resp = await apiRequest(serverOrigin + '/api/oauth/google/status', 'GET')
-  return resp.body && resp.body.authorized
 }
 
 function toolAuthorizeGoogle(invocationId) {
@@ -162,14 +155,12 @@ function toolAuthorizeGoogle(invocationId) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool: load_deck
+// Tool: load_deck (modified to auto-start quiz state)
 // ---------------------------------------------------------------------------
 
 function extractSheetId(urlOrId) {
-  // Handle full URLs like https://docs.google.com/spreadsheets/d/SHEET_ID/edit...
   const match = urlOrId.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/)
   if (match) return match[1]
-  // Handle bare IDs
   if (/^[a-zA-Z0-9_-]+$/.test(urlOrId)) return urlOrId
   return null
 }
@@ -190,7 +181,6 @@ async function toolLoadDeck(invocationId, params) {
   resizeFrame()
 
   try {
-    // Fetch sheet data via proxy (server injects OAuth token)
     const resp = await apiRequest(
       `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:C?majorDimension=ROWS`,
       'GET',
@@ -221,8 +211,6 @@ async function toolLoadDeck(invocationId, params) {
 
     // Parse: first row is header, rest are cards
     deck = []
-    score = { correct: 0, incorrect: 0, answers: {} }
-
     for (let i = 1; i < values.length; i++) {
       const row = values[i]
       const term = (row[0] || '').trim()
@@ -240,17 +228,30 @@ async function toolLoadDeck(invocationId, params) {
       return
     }
 
+    // Shuffle deck and initialize quiz state
+    deck = shuffleArray(deck)
+    currentIndex = 0
+    results = []
+    pendingStudentAnswer = ''
+    appState = 'awaiting_answer'
+
     // Show deck info
     statusEl.classList.add('hidden')
     deckInfoEl.innerHTML = `<div class="deck-banner"><h3>Deck loaded: ${deck.length} terms</h3><p>Ready to quiz!</p></div>`
     deckInfoEl.classList.remove('hidden')
+    renderQuizCard()
     resizeFrame()
 
+    // Return first question alongside load confirmation
+    const firstCard = deck[0]
     sendResult(invocationId, {
       loaded: true,
       termCount: deck.length,
-      terms: deck.map((c) => c.term),
-      message: `Loaded ${deck.length} flashcards. Ready to quiz the student.`,
+      state: 'awaiting_answer',
+      term: firstCard.term,
+      questionNumber: 1,
+      totalQuestions: deck.length,
+      message: `Loaded ${deck.length} flashcards. Ask the student: what is "${firstCard.term}"?`,
     })
   } catch (err) {
     statusEl.textContent = 'Failed to load deck.'
@@ -260,63 +261,136 @@ async function toolLoadDeck(invocationId, params) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool: check_answer
+// next_turn state machine
 // ---------------------------------------------------------------------------
 
-function toolCheckAnswer(invocationId, params) {
-  const { term, studentAnswer } = params
-  const cardEl = document.getElementById('card')
-  const termEl = document.getElementById('card-term')
-  const resultEl = document.getElementById('card-result')
-  const scoreBarEl = document.getElementById('score-bar')
+function handleNextTurn(invocationId, input) {
+  switch (appState) {
+    case 'no_deck':
+      sendResult(invocationId, {
+        state: 'no_deck',
+        message: 'No deck loaded. Call load_deck first.',
+      })
+      break
+    case 'awaiting_answer':
+      handleAwaitingAnswer(invocationId, input)
+      break
+    case 'awaiting_judgment':
+      handleAwaitingJudgment(invocationId, input)
+      break
+    case 'complete':
+      handleComplete(invocationId)
+      break
+    default:
+      sendError(invocationId, 'INVALID_STATE', `Unexpected state: ${appState}`)
+  }
+}
 
-  const card = deck.find((c) => c.term.toLowerCase() === (term || '').toLowerCase())
-  if (!card) {
-    sendResult(invocationId, { error: `Term "${term}" not found in current deck` })
+function handleAwaitingAnswer(invocationId, input) {
+  const studentAnswer = (input.studentAnswer || '').trim()
+  const card = deck[currentIndex]
+
+  if (!studentAnswer) {
+    // No answer — return current question
+    sendResult(invocationId, {
+      state: 'awaiting_answer',
+      term: card.term,
+      questionNumber: currentIndex + 1,
+      totalQuestions: deck.length,
+    })
     return
   }
 
-  // Simple similarity check — the LLM does the real grading, but we track it
-  const normalizedAnswer = (studentAnswer || '').toLowerCase().trim()
-  const normalizedDefinition = card.definition.toLowerCase().trim()
-  const isClose = normalizedDefinition.includes(normalizedAnswer) ||
-                  normalizedAnswer.includes(normalizedDefinition) ||
-                  normalizedAnswer.length > 10  // Let LLM judge longer answers
+  // Store answer, transition to judgment
+  pendingStudentAnswer = studentAnswer
+  appState = 'awaiting_judgment'
 
-  // Always let the LLM do the real grading — we just show the UI
-  const alreadyAnswered = card.term in score.answers
-  if (!alreadyAnswered) {
-    score.answers[card.term] = isClose
-    if (isClose) score.correct++
-    else score.incorrect++
-  }
-
-  // Show card UI
-  cardEl.classList.remove('hidden')
-  termEl.textContent = card.term
-
-  // We return the data and let the LLM decide correct/incorrect
-  // The LLM will call back to update if needed
-  resultEl.innerHTML = `<strong>Your answer:</strong> ${escapeHtml(studentAnswer)}<br><strong>Definition:</strong> ${escapeHtml(card.definition)}${card.hint ? '<br><em>Hint: ' + escapeHtml(card.hint) + '</em>' : ''}`
-  resultEl.className = ''
-  resultEl.classList.remove('hidden')
-
-  scoreBarEl.classList.remove('hidden')
-  updateScoreBar()
+  // Update UI to show the answer being checked
+  showAnswerOnCard(card.term, studentAnswer)
   resizeFrame()
 
-  // Find the next unanswered term
-  const answeredTerms = new Set(Object.keys(score.answers))
-  const nextCard = deck.find((c) => !answeredTerms.has(c.term) && c.term !== card.term)
+  sendResult(invocationId, {
+    state: 'awaiting_judgment',
+    term: card.term,
+    definition: card.definition,
+    hint: card.hint || null,
+    studentAnswer,
+    questionNumber: currentIndex + 1,
+    totalQuestions: deck.length,
+  })
+}
+
+function handleAwaitingJudgment(invocationId, input) {
+  if (typeof input.correct !== 'boolean') {
+    // No judgment — re-send judgment data
+    const card = deck[currentIndex]
+    sendResult(invocationId, {
+      state: 'awaiting_judgment',
+      term: card.term,
+      definition: card.definition,
+      hint: card.hint || null,
+      studentAnswer: pendingStudentAnswer,
+      questionNumber: currentIndex + 1,
+      totalQuestions: deck.length,
+    })
+    return
+  }
+
+  const isCorrect = input.correct
+  const card = deck[currentIndex]
+
+  // Record result
+  results.push({
+    term: card.term,
+    definition: card.definition,
+    studentAnswer: pendingStudentAnswer,
+    isCorrect,
+  })
+
+  // Show feedback on card
+  showFeedbackOnCard(isCorrect, card.definition)
+  updateScoreBar()
+
+  // Advance
+  currentIndex++
+  pendingStudentAnswer = ''
+
+  if (currentIndex >= deck.length) {
+    appState = 'complete'
+    setTimeout(() => {
+      renderEndScreen()
+      resizeFrame()
+    }, 1500)
+
+    sendResult(invocationId, {
+      state: 'complete',
+      score: getScoreData(),
+    })
+    return
+  }
+
+  // Next question
+  appState = 'awaiting_answer'
+  const nextCard = deck[currentIndex]
+
+  setTimeout(() => {
+    renderQuizCard()
+    resizeFrame()
+  }, 1500)
 
   sendResult(invocationId, {
-    term: card.term,
-    studentAnswer,
-    correctDefinition: card.definition,
-    hint: card.hint || null,
-    alreadyAnswered,
-    nextTerm: nextCard ? nextCard.term : null,
-    remaining: deck.length - answeredTerms.size - (alreadyAnswered ? 0 : 1),
+    state: 'awaiting_answer',
+    term: nextCard.term,
+    questionNumber: currentIndex + 1,
+    totalQuestions: deck.length,
+    previousResult: { correct: isCorrect, term: card.term },
+  })
+}
+
+function handleComplete(invocationId) {
+  sendResult(invocationId, {
+    state: 'complete',
+    score: getScoreData(),
   })
 }
 
@@ -325,24 +399,90 @@ function toolCheckAnswer(invocationId, params) {
 // ---------------------------------------------------------------------------
 
 function getScoreData() {
+  const correctCount = results.filter((r) => r.isCorrect).length
+  const missed = results
+    .filter((r) => !r.isCorrect)
+    .map((r) => ({ term: r.term, definition: r.definition, studentAnswer: r.studentAnswer }))
+
   return {
-    correct: score.correct,
-    incorrect: score.incorrect,
-    total: deck.length,
-    answered: score.correct + score.incorrect,
-    remaining: deck.length - (score.correct + score.incorrect),
-    missedTerms: Object.entries(score.answers)
-      .filter(([, v]) => !v)
-      .map(([term]) => {
-        const card = deck.find((c) => c.term === term)
-        return { term, definition: card ? card.definition : '' }
-      }),
+    correct: correctCount,
+    total: results.length,
+    missed,
   }
 }
 
 function updateScoreBar() {
   const el = document.getElementById('score-bar')
-  el.innerHTML = `<span class="score-correct">${score.correct} correct</span> · <span class="score-incorrect">${score.incorrect} incorrect</span> · ${deck.length - score.correct - score.incorrect} remaining`
+  if (!el) return
+  const correctCount = results.filter((r) => r.isCorrect).length
+  const incorrectCount = results.filter((r) => !r.isCorrect).length
+  const remaining = deck.length - results.length
+  el.innerHTML = `<span class="score-correct">${correctCount} correct</span> · <span class="score-incorrect">${incorrectCount} incorrect</span> · ${remaining} remaining`
+  el.classList.remove('hidden')
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+
+function renderQuizCard() {
+  if (currentIndex >= deck.length) {
+    renderEndScreen()
+    return
+  }
+
+  const card = deck[currentIndex]
+  const cardEl = document.getElementById('card')
+  const termEl = document.getElementById('card-term')
+  const resultEl = document.getElementById('card-result')
+
+  cardEl.classList.remove('hidden')
+  termEl.textContent = card.term
+  resultEl.innerHTML = `<em style="color:#57606a;">Waiting for answer...</em>`
+  resultEl.className = ''
+  resultEl.classList.remove('hidden')
+  resizeFrame()
+}
+
+function showAnswerOnCard(term, studentAnswer) {
+  const termEl = document.getElementById('card-term')
+  const resultEl = document.getElementById('card-result')
+
+  termEl.textContent = term
+  resultEl.innerHTML = `<strong>Answer:</strong> ${escapeHtml(studentAnswer)}<br><em style="color:#57606a;">Checking...</em>`
+  resultEl.className = ''
+}
+
+function showFeedbackOnCard(isCorrect, definition) {
+  const cardEl = document.getElementById('card')
+  const resultEl = document.getElementById('card-result')
+
+  cardEl.classList.remove('hidden')
+  resultEl.className = isCorrect ? 'correct' : 'incorrect'
+  resultEl.innerHTML = `<strong>${isCorrect ? 'Correct!' : 'Incorrect'}</strong><br><strong>Definition:</strong> ${escapeHtml(definition)}`
+}
+
+function renderEndScreen() {
+  const cardEl = document.getElementById('card')
+  const termEl = document.getElementById('card-term')
+  const resultEl = document.getElementById('card-result')
+
+  cardEl.classList.remove('hidden')
+  const score = getScoreData()
+  termEl.textContent = `Quiz Complete: ${score.correct}/${score.total}`
+
+  if (score.missed.length > 0) {
+    let html = '<div style="margin-top:8px;"><strong>Missed:</strong><ul style="margin:4px 0;padding-left:20px;">'
+    for (const m of score.missed) {
+      html += `<li><strong>${escapeHtml(m.term)}</strong>: ${escapeHtml(m.definition)}</li>`
+    }
+    html += '</ul></div>'
+    resultEl.innerHTML = html
+  } else {
+    resultEl.innerHTML = '<strong>Perfect score!</strong>'
+  }
+  resultEl.className = ''
+  resultEl.classList.remove('hidden')
 }
 
 // ---------------------------------------------------------------------------
@@ -356,12 +496,27 @@ function escapeHtml(str) {
   return div.innerHTML
 }
 
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = tmp
+  }
+  return arr
+}
+
 function resetApp() {
   deck = []
-  score = { correct: 0, incorrect: 0, answers: {} }
+  currentIndex = 0
+  results = []
+  appState = 'no_deck'
+  pendingStudentAnswer = ''
+  googleAuthorized = false
   document.getElementById('status').textContent = 'Waiting to connect...'
   document.getElementById('status').classList.remove('hidden')
   document.getElementById('deck-info').classList.add('hidden')
   document.getElementById('card').classList.add('hidden')
-  document.getElementById('score-bar').classList.add('hidden')
+  const scoreBar = document.getElementById('score-bar')
+  if (scoreBar) scoreBar.classList.add('hidden')
 }

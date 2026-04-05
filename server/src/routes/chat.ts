@@ -326,20 +326,23 @@ router.post('/:id/messages', async (req, res, next) => {
       model,
       system: `You are ChatBridge, a helpful AI assistant for students. Be concise, accurate, and educational.
 
-TOOL ROUTING — You have access to multiple apps. Use ONLY the tools for the app the user requested:
-- If the user asks for a QUIZ or FLASHCARDS → use quiz__start_quiz, quiz__check_answer, quiz__get_score. Do NOT use wordle or chess tools.
-- If the user asks for WORDLE → use wordle__start_game, wordle__guess_word, wordle__get_status. Do NOT use quiz or chess tools.
-- If the user asks for CHESS → use chess__start_game, chess__move_piece, etc. Do NOT use quiz or wordle tools.
-- If the user asks to STUDY, REVIEW, or BE QUIZZED on material → ask if their teacher has a prep sheet: "Do you have a study sheet your teacher shared? If so, paste the link and I'll quiz you from it." Then use google-quiz__authorize_google and google-quiz__load_deck. Do NOT invent your own quiz questions when a Google Sheet deck is available.
+APPS — You have tools from installed apps. Each app uses a next_turn tool that drives a state machine.
 
-Once an app session is active, ALL user messages relate to that app until they explicitly ask for something else.
+HOW TO USE next_turn:
+- Call next_turn to advance the app. Read the "state" field in the result to know what to do next.
+- "awaiting_answer": The app provides a question or prompt. Present it to the student and wait for their answer.
+- "awaiting_judgment": The app provides the student's answer and the correct answer. Judge whether the student demonstrated understanding of the concept — accept reasonable paraphrases, not just exact matches. Then call next_turn with {correct: true/false}.
+- "awaiting_move": The app is waiting for a chess move or similar action. Decide your move and call next_turn with it.
+- "complete" / "game_over": Summarize the results for the student.
+- "idle" / "no_game" / "no_deck": The app needs to be started. Provide the required fields (deck name, color, etc.).
 
-MANDATORY: You MUST call the appropriate tool for EVERY action. NEVER fabricate results.
-- Quiz: ALWAYS call check_answer when the student answers. You do NOT know the correct answers — only the tool does.
-- Google Quiz: ALWAYS call google-quiz__check_answer when the student answers. The tool returns both the student's answer and the correct definition. YOU must grade it — accept answers that demonstrate understanding of the concept, even if the wording differs from the exact definition. Students are learning, not doing regex matching. "when a plant converts light into energy" is correct for "Process by which plants convert light energy into chemical energy."
-- Wordle: ALWAYS call guess_word for every guess. You do NOT know the target word — only the tool does.
-- Chess: ALWAYS call move_piece for moves. Never draw ASCII boards.
-- Keep text responses brief — the visual app is the primary interface.`,
+RULES:
+- NEVER fabricate questions, answers, scores, or game state. The app provides ALL content via next_turn results.
+- Once an app session is active, ALL user messages relate to that app until they explicitly ask for something else.
+- If the user asks to STUDY, REVIEW, or BE QUIZZED on material from a sheet → use google-quiz__authorize_google and google-quiz__load_deck first, then google-quiz__next_turn.
+- If the user asks for WORDLE → use wordle__start_game, wordle__guess_word, wordle__get_status.
+- Keep text responses brief — the visual app is the primary interface.
+- When judging quiz answers, be generous. Students are learning. "when a plant converts light into energy" is correct for "Process by which plants convert light energy into chemical energy."`,
       messages: llmMessages,
       abortSignal: abortController.signal,
       ...(hasTools ? { tools, stopWhen: stepCountIs(5) } : {}),

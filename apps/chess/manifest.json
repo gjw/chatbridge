@@ -1,31 +1,21 @@
 {
   "slug": "chess",
   "name": "Chess",
-  "description": "Play chess interactively. The LLM can start games, make moves, and analyze positions.",
+  "description": "Play chess interactively. The app is a state machine — call next_turn to start a game, make moves, or get board state.",
   "trustTier": "internal",
   "entryUrl": "http://localhost:3200",
   "tools": [
     {
-      "name": "start_game",
-      "description": "Start a new chess game. Returns the initial board state.",
+      "name": "next_turn",
+      "description": "Advance the chess state machine. Pass {color} to start a game, {from, to} to make a move, {resign: true} to resign. Empty call returns current board state. The response 'state' field tells you what to do next.",
       "parameters": {
         "type": "object",
         "properties": {
           "color": {
             "type": "string",
             "enum": ["white", "black"],
-            "description": "Which color the human player plays. Defaults to white."
-          }
-        }
-      },
-      "rendersUi": true
-    },
-    {
-      "name": "move_piece",
-      "description": "Make a chess move using algebraic notation (e.g. from='e2', to='e4'). Only legal moves are accepted.",
-      "parameters": {
-        "type": "object",
-        "properties": {
+            "description": "Start a new game with the human playing this color. Only needed to begin."
+          },
           "from": {
             "type": "string",
             "description": "Source square in algebraic notation (e.g. 'e2')"
@@ -37,44 +27,15 @@
           "promotion": {
             "type": "string",
             "enum": ["q", "r", "b", "n"],
-            "description": "Promotion piece (queen/rook/bishop/knight) if pawn reaches last rank"
-          }
-        },
-        "required": ["from", "to"]
-      },
-      "rendersUi": true
-    },
-    {
-      "name": "get_board_state",
-      "description": "Get the current board state including FEN, whose turn it is, move count, and game status.",
-      "parameters": {
-        "type": "object",
-        "properties": {}
-      },
-      "rendersUi": false
-    },
-    {
-      "name": "get_legal_moves",
-      "description": "Get legal moves, optionally filtered to a specific square.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "square": {
-            "type": "string",
-            "description": "Optional square to get moves for (e.g. 'e2'). If omitted, returns all legal moves."
+            "description": "Promotion piece if pawn reaches last rank"
+          },
+          "resign": {
+            "type": "boolean",
+            "description": "Set to true to resign the current game."
           }
         }
       },
-      "rendersUi": false
-    },
-    {
-      "name": "resign",
-      "description": "Resign the current game.",
-      "parameters": {
-        "type": "object",
-        "properties": {}
-      },
-      "rendersUi": false
+      "rendersUi": true
     }
   ],
   "permissions": ["ui:render"]

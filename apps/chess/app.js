@@ -1,5 +1,6 @@
-// Chess App — ChatBridge Bridge Protocol Implementation
-// Uses chess.js for game logic, pure CSS/Unicode for board rendering.
+// Chess App — State-machine next_turn pattern
+// App is the state machine. LLM calls next_turn with context, app decides what happens.
+// States: no_game → awaiting_move → (loop or game_over)
 
 /* global Chess */
 
@@ -72,118 +73,154 @@ function resizeFrame() {
 }
 
 // ---------------------------------------------------------------------------
-// Tool Handlers
+// Tool Handler — single next_turn entry point
 // ---------------------------------------------------------------------------
 
 function handleToolInvoke(msg) {
   const { invocationId, toolName, parameters } = msg
 
+  if (toolName !== 'next_turn') {
+    sendError(invocationId, 'UNKNOWN_TOOL', `Unknown tool: ${toolName}`)
+    return
+  }
+
+  const input = parameters || {}
+
   try {
-    let result
-    switch (toolName) {
-      case 'start_game':
-        result = toolStartGame(parameters)
-        break
-      case 'move_piece':
-        result = toolMovePiece(parameters)
-        break
-      case 'get_board_state':
-        result = toolGetBoardState()
-        break
-      case 'get_legal_moves':
-        result = toolGetLegalMoves(parameters)
-        break
-      case 'resign':
-        result = toolResign()
-        break
-      default:
-        sendError(invocationId, 'UNKNOWN_TOOL', `Unknown tool: ${toolName}`)
-        return
+    if (!game) {
+      // No game — need color to start, or return no_game state
+      handleNoGame(invocationId, input)
+    } else if (getGameStatus() !== 'in_progress') {
+      // Game over — can start new game with color, or return result
+      handleGameOver(invocationId, input)
+    } else {
+      // Game in progress — handle move, resign, or state query
+      handleInProgress(invocationId, input)
     }
-    sendResult(invocationId, result)
   } catch (err) {
     sendError(invocationId, 'EXECUTION_ERROR', err.message)
   }
 }
 
-function toolStartGame(params) {
-  const color = params.color || 'white'
-  playerColor = color === 'black' ? 'b' : 'w'
-  game = new Chess()
-  selectedSquare = null
-  lastMove = null
-  renderBoard()
-  updateStatus()
-  resizeFrame()
+// ---------------------------------------------------------------------------
+// State: no_game
+// ---------------------------------------------------------------------------
 
-  return {
-    fen: game.fen(),
-    gameStatus: 'in_progress',
-    playerColor: color,
-    turn: 'white',
+function handleNoGame(invocationId, input) {
+  if (input.color) {
+    // Start a new game
+    const color = input.color === 'black' ? 'b' : 'w'
+    playerColor = color
+    game = new Chess()
+    selectedSquare = null
+    lastMove = null
+    renderBoard()
+    updateStatus()
+    resizeFrame()
+
+    sendResult(invocationId, {
+      state: 'awaiting_move',
+      fen: game.fen(),
+      gameStatus: 'in_progress',
+      playerColor: input.color || 'white',
+      turn: 'white',
+      moveCount: 1,
+    })
+    return
   }
+
+  sendResult(invocationId, {
+    state: 'no_game',
+    message: 'No game in progress. Provide a color to start a new game.',
+  })
 }
 
-function toolMovePiece(params) {
-  if (!game) throw new Error('No game in progress. Call start_game first.')
+// ---------------------------------------------------------------------------
+// State: game in progress
+// ---------------------------------------------------------------------------
 
-  const moveObj = { from: params.from, to: params.to }
-  if (params.promotion) moveObj.promotion = params.promotion
+function handleInProgress(invocationId, input) {
+  // Resign
+  if (input.resign) {
+    const winner = game.turn() === 'w' ? 'black' : 'white'
+    updateStatusText(`Game over: ${game.turn() === 'w' ? 'White' : 'Black'} resigned. ${winner} wins!`)
 
-  const move = game.move(moveObj)
-  if (!move) {
-    throw new Error(`Illegal move: ${params.from} -> ${params.to}. Legal moves from ${params.from}: ${game.moves({ square: params.from }).join(', ') || 'none'}`)
+    sendResult(invocationId, {
+      state: 'game_over',
+      result: 'resigned',
+      winner,
+      fen: game.fen(),
+    })
+    return
   }
 
-  lastMove = { from: move.from, to: move.to }
-  selectedSquare = null
-  renderBoard()
-  updateStatus()
+  // Make a move
+  if (input.from && input.to) {
+    const moveObj = { from: input.from, to: input.to }
+    if (input.promotion) moveObj.promotion = input.promotion
 
-  return {
-    fen: game.fen(),
-    lastMove: `${move.from}${move.to}`,
-    san: move.san,
-    gameStatus: getGameStatus(),
-    captured: move.captured || null,
-    turn: game.turn() === 'w' ? 'white' : 'black',
+    const move = game.move(moveObj)
+    if (!move) {
+      const legalFromSquare = game.moves({ square: input.from })
+      sendError(invocationId, 'ILLEGAL_MOVE',
+        `Illegal move: ${input.from} → ${input.to}. Legal moves from ${input.from}: ${legalFromSquare.join(', ') || 'none'}`)
+      return
+    }
+
+    lastMove = { from: move.from, to: move.to }
+    selectedSquare = null
+    renderBoard()
+    updateStatus()
+
+    const status = getGameStatus()
+    const result = {
+      state: status === 'in_progress' ? 'awaiting_move' : 'game_over',
+      fen: game.fen(),
+      lastMove: `${move.from}${move.to}`,
+      san: move.san,
+      gameStatus: status,
+      captured: move.captured || null,
+      turn: game.turn() === 'w' ? 'white' : 'black',
+      moveCount: Math.floor(game.history().length / 2) + 1,
+    }
+
+    if (status !== 'in_progress') {
+      result.result = status
+    }
+
+    sendResult(invocationId, result)
+    return
   }
-}
 
-function toolGetBoardState() {
-  if (!game) throw new Error('No game in progress. Call start_game first.')
-
-  return {
+  // No action — return current board state
+  sendResult(invocationId, {
+    state: 'awaiting_move',
     fen: game.fen(),
     turn: game.turn() === 'w' ? 'white' : 'black',
     moveCount: Math.floor(game.history().length / 2) + 1,
-    gameStatus: getGameStatus(),
+    gameStatus: 'in_progress',
     isCheck: game.in_check(),
     legalMoves: game.moves(),
-  }
+  })
 }
 
-function toolGetLegalMoves(params) {
-  if (!game) throw new Error('No game in progress. Call start_game first.')
+// ---------------------------------------------------------------------------
+// State: game over
+// ---------------------------------------------------------------------------
 
-  const opts = params.square ? { square: params.square } : {}
-  return {
-    moves: game.moves(opts),
-    square: params.square || 'all',
+function handleGameOver(invocationId, input) {
+  if (input.color) {
+    // Start a new game
+    handleNoGame(invocationId, input)
+    return
   }
-}
 
-function toolResign() {
-  if (!game) throw new Error('No game in progress.')
-
-  const winner = game.turn() === 'w' ? 'black' : 'white'
-  updateStatusText(`Game over: ${game.turn() === 'w' ? 'White' : 'Black'} resigned. ${winner} wins!`)
-
-  return {
-    result: 'resigned',
-    winner,
+  sendResult(invocationId, {
+    state: 'game_over',
     fen: game.fen(),
-  }
+    result: getGameStatus(),
+    moveCount: Math.floor(game.history().length / 2) + 1,
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +271,6 @@ function renderBoard() {
   // Find king in check
   let checkSquare = null
   if (game.in_check()) {
-    // Find the king of the current turn
     const board8x8 = game.board()
     for (let r = 0; r < 8; r++) {
       for (let f = 0; f < 8; f++) {
@@ -311,9 +347,6 @@ function onSquareClick(square) {
       selectedSquare = null
       renderBoard()
       updateStatus()
-
-      // Notify the platform that the user made a move (for LLM awareness)
-      // This is informational — the LLM can query get_board_state to see changes
       return
     }
 
@@ -379,11 +412,9 @@ function updateStatusText(text) {
 }
 
 // ---------------------------------------------------------------------------
-// Init — send ready immediately if no bridge:init needed
-// (bridge:init will come from AppHost, but be ready for direct loading too)
+// Init
 // ---------------------------------------------------------------------------
 
-// If loaded outside of bridge context (e.g. direct browser), show a message
 setTimeout(() => {
   if (!appId) {
     updateStatusText('Chess app loaded. Awaiting bridge connection...')

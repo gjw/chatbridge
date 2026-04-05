@@ -1,13 +1,13 @@
 {
   "slug": "google-quiz",
   "name": "Vocab Quiz (Google Sheets)",
-  "description": "Vocabulary quiz that pulls flashcard decks from Google Sheets. Teachers create decks in Sheets, students study them here with AI tutoring.",
+  "description": "Vocabulary quiz that pulls flashcard decks from Google Sheets. Teachers create decks in Sheets, students study them here with AI tutoring. Call authorize_google, then load_deck, then next_turn to quiz.",
   "trustTier": "external_auth",
   "entryUrl": "http://localhost:3205",
   "tools": [
     {
       "name": "authorize_google",
-      "description": "Connect the student's Google account so the app can read shared Google Sheets. Call ONCE at the start of a session, NEVER again after it returns authorized:true. If you already called this and got authorized:true, skip it and go straight to load_deck or check_answer.",
+      "description": "Connect the student's Google account so the app can read shared Google Sheets. Call ONCE at the start of a session, NEVER again after it returns authorized:true.",
       "parameters": {
         "type": "object",
         "properties": {},
@@ -17,7 +17,7 @@
     },
     {
       "name": "load_deck",
-      "description": "Load a flashcard deck from a Google Sheet. The sheet should have columns: Term, Definition, and optionally Hint. Pass the sheet URL or ID.",
+      "description": "Load a flashcard deck from a Google Sheet. The sheet should have columns: Term, Definition, and optionally Hint. Pass the sheet URL or ID. After this succeeds, use next_turn to quiz.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -31,33 +31,22 @@
       "rendersUi": true
     },
     {
-      "name": "check_answer",
-      "description": "Check a student's answer against the current flashcard. Returns whether correct, the right answer, and any hint.",
+      "name": "next_turn",
+      "description": "Advance the quiz state machine. Pass {studentAnswer} to submit an answer, {correct} to record your judgment. The response 'state' field tells you what to do next.",
       "parameters": {
         "type": "object",
         "properties": {
-          "term": {
-            "type": "string",
-            "description": "The term being quizzed"
-          },
           "studentAnswer": {
             "type": "string",
-            "description": "The student's answer to check"
+            "description": "The student's answer to the current term."
+          },
+          "correct": {
+            "type": "boolean",
+            "description": "Your judgment: did the student's answer demonstrate understanding of the definition?"
           }
-        },
-        "required": ["term", "studentAnswer"]
+        }
       },
       "rendersUi": true
-    },
-    {
-      "name": "get_score",
-      "description": "Get the student's current quiz score and which terms they got right/wrong.",
-      "parameters": {
-        "type": "object",
-        "properties": {},
-        "required": []
-      },
-      "rendersUi": false
     }
   ],
   "permissions": ["ui:render", "api:proxy"]

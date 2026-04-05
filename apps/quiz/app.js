@@ -1,5 +1,6 @@
-// Vocabulary Quiz App — ChatBridge Bridge Protocol Implementation
-// Display-only: students answer via chat, LLM relays to check_answer.
+// Vocabulary Quiz App — State-machine next_turn pattern
+// App is the state machine. LLM is a stateless judge.
+// States: idle → awaiting_answer → awaiting_judgment → (loop or complete)
 
 /* global DECKS */
 
@@ -12,9 +13,10 @@ let sessionId = null
 let currentDeckName = ''
 let questions = []       // Shuffled copy of the active deck
 let currentIndex = 0     // Index of current question
-let results = []         // Array of {question, studentAnswer, correctAnswer, isCorrect}
-let quizActive = false
+let results = []         // Array of {question, correctAnswer, studentAnswer, isCorrect}
+let appState = 'idle'    // idle | awaiting_answer | awaiting_judgment | complete
 let feedbackTimeout = null
+let pendingStudentAnswer = '' // Held between awaiting_answer → awaiting_judgment
 
 // ---------------------------------------------------------------------------
 // Bridge Protocol
@@ -66,56 +68,67 @@ function resizeFrame() {
 }
 
 // ---------------------------------------------------------------------------
-// Tool Handlers
+// Tool Handler — single next_turn entry point
 // ---------------------------------------------------------------------------
 
 function handleToolInvoke(msg) {
   const { invocationId, toolName, parameters } = msg
 
-  switch (toolName) {
-    case 'start_quiz':
-      toolStartQuiz(invocationId, parameters)
+  if (toolName !== 'next_turn') {
+    sendError(invocationId, 'UNKNOWN_TOOL', `Unknown tool: ${toolName}`)
+    return
+  }
+
+  const input = parameters || {}
+
+  // State machine dispatch
+  switch (appState) {
+    case 'idle':
+      handleIdle(invocationId, input)
       break
-    case 'check_answer':
-      toolCheckAnswer(invocationId, parameters)
+    case 'awaiting_answer':
+      handleAwaitingAnswer(invocationId, input)
       break
-    case 'get_score':
-      sendResult(invocationId, toolGetScore())
+    case 'awaiting_judgment':
+      handleAwaitingJudgment(invocationId, input)
+      break
+    case 'complete':
+      handleComplete(invocationId)
       break
     default:
-      sendError(invocationId, 'UNKNOWN_TOOL', `Unknown tool: ${toolName}`)
+      sendError(invocationId, 'INVALID_STATE', `Unexpected state: ${appState}`)
   }
 }
 
-function toolStartQuiz(invocationId, params) {
-  // If quiz is already active, return current state instead of restarting
-  if (quizActive && questions.length > 0) {
-    const q = questions[currentIndex]
+// ---------------------------------------------------------------------------
+// State: idle — waiting for a deck to start
+// ---------------------------------------------------------------------------
+
+function handleIdle(invocationId, input) {
+  const deckName = (input.deck || '').toLowerCase()
+
+  if (!deckName) {
     sendResult(invocationId, {
-      alreadyActive: true,
-      deck: currentDeckName,
-      questionNumber: currentIndex + 1,
-      totalQuestions: questions.length,
-      question: q.question,
-      answeredSoFar: results.length,
+      state: 'idle',
+      message: 'No quiz active. Provide a deck name to start.',
+      availableDecks: Object.keys(DECKS),
     })
     return
   }
 
-  const deckName = (params.deck || 'science').toLowerCase()
   const deck = DECKS[deckName]
-
   if (!deck) {
-    sendError(invocationId, 'INVALID_DECK', `Unknown deck: "${deckName}". Available: science, spanish.`)
+    sendError(invocationId, 'INVALID_DECK', `Unknown deck: "${deckName}". Available: ${Object.keys(DECKS).join(', ')}`)
     return
   }
 
-  // Shuffle a copy of the deck
+  // Start the quiz
   currentDeckName = deckName
   questions = shuffleArray([...deck])
   currentIndex = 0
   results = []
-  quizActive = true
+  pendingStudentAnswer = ''
+  appState = 'awaiting_answer'
 
   if (feedbackTimeout) {
     clearTimeout(feedbackTimeout)
@@ -128,99 +141,153 @@ function toolStartQuiz(invocationId, params) {
   resizeFrame()
 
   sendResult(invocationId, {
-    deck: deckName,
-    totalQuestions: questions.length,
-    currentQuestion: 1,
+    state: 'awaiting_answer',
     question: questions[0].question,
+    questionNumber: 1,
+    totalQuestions: questions.length,
+    deck: deckName,
   })
 }
 
-function toolCheckAnswer(invocationId, params) {
-  if (!quizActive) {
-    sendError(invocationId, 'NO_QUIZ', 'No quiz in progress. Call start_quiz first.')
-    return
-  }
-  if (currentIndex >= questions.length) {
-    sendError(invocationId, 'QUIZ_COMPLETE', 'Quiz is already complete. Call get_score for results.')
-    return
-  }
+// ---------------------------------------------------------------------------
+// State: awaiting_answer — app shows question, LLM relays student answer
+// ---------------------------------------------------------------------------
 
-  const studentAnswer = (params.answer || '').trim()
+function handleAwaitingAnswer(invocationId, input) {
+  const studentAnswer = (input.studentAnswer || '').trim()
+
   if (!studentAnswer) {
-    sendError(invocationId, 'EMPTY_ANSWER', 'Answer cannot be empty.')
+    // No answer provided — return current state
+    const q = questions[currentIndex]
+    sendResult(invocationId, {
+      state: 'awaiting_answer',
+      question: q.question,
+      questionNumber: currentIndex + 1,
+      totalQuestions: questions.length,
+      deck: currentDeckName,
+    })
     return
   }
 
-  const current = questions[currentIndex]
-  const correctAnswer = current.answer
-  const isCorrect = checkMatch(studentAnswer, correctAnswer)
+  // Store the answer and transition to awaiting_judgment
+  const q = questions[currentIndex]
+  pendingStudentAnswer = studentAnswer
+  appState = 'awaiting_judgment'
 
-  results.push({
-    question: current.question,
+  sendResult(invocationId, {
+    state: 'awaiting_judgment',
+    question: q.question,
+    correctAnswer: q.answer,
     studentAnswer,
-    correctAnswer,
+    questionNumber: currentIndex + 1,
+    totalQuestions: questions.length,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// State: awaiting_judgment — LLM decides if the answer was correct
+// ---------------------------------------------------------------------------
+
+function handleAwaitingJudgment(invocationId, input) {
+  if (typeof input.correct !== 'boolean') {
+    // No judgment provided — re-send judgment request
+    const q = questions[currentIndex]
+    sendResult(invocationId, {
+      state: 'awaiting_judgment',
+      question: q.question,
+      correctAnswer: q.answer,
+      studentAnswer: pendingStudentAnswer,
+      questionNumber: currentIndex + 1,
+      totalQuestions: questions.length,
+    })
+    return
+  }
+
+  const isCorrect = input.correct
+  const q = questions[currentIndex]
+
+  // Record result
+  results.push({
+    question: q.question,
+    correctAnswer: q.answer,
+    studentAnswer: pendingStudentAnswer,
     isCorrect,
   })
 
-  currentIndex++
-  const quizComplete = currentIndex >= questions.length
-
-  // Show feedback on card
-  showFeedback(isCorrect, correctAnswer, quizComplete)
+  // Show feedback
+  showFeedback(isCorrect, q.answer)
   updateScoreCounter()
-  resizeFrame()
 
-  const response = {
-    correct: isCorrect,
-    correctAnswer,
-    questionsAnswered: results.length,
-    totalQuestions: questions.length,
-    quizComplete,
+  // Advance
+  currentIndex++
+  pendingStudentAnswer = ''
+
+  if (currentIndex >= questions.length) {
+    // Quiz complete
+    appState = 'complete'
+
+    // Delay end screen render so feedback shows briefly
+    if (feedbackTimeout) clearTimeout(feedbackTimeout)
+    feedbackTimeout = setTimeout(() => {
+      feedbackTimeout = null
+      renderEndScreen()
+      resizeFrame()
+    }, 1500)
+
+    sendResult(invocationId, {
+      state: 'complete',
+      score: getScoreData(),
+    })
+    return
   }
 
-  if (!quizComplete) {
-    response.nextQuestion = questions[currentIndex].question
-    response.currentQuestion = currentIndex + 1
-  }
+  // Next question — delay card render so feedback shows
+  appState = 'awaiting_answer'
 
-  sendResult(invocationId, response)
-}
+  if (feedbackTimeout) clearTimeout(feedbackTimeout)
+  feedbackTimeout = setTimeout(() => {
+    feedbackTimeout = null
+    renderCard()
+    resizeFrame()
+  }, 1500)
 
-function toolGetScore() {
-  return {
-    questionsAnswered: results.length,
-    correctCount: results.filter((r) => r.isCorrect).length,
+  sendResult(invocationId, {
+    state: 'awaiting_answer',
+    question: questions[currentIndex].question,
+    questionNumber: currentIndex + 1,
     totalQuestions: questions.length,
     deck: currentDeckName,
-    quizComplete: currentIndex >= questions.length,
-    results: results.map((r) => ({
-      question: r.question,
-      studentAnswer: r.studentAnswer,
-      correctAnswer: r.correctAnswer,
-      isCorrect: r.isCorrect,
-    })),
-  }
+    previousResult: { correct: isCorrect, question: q.question },
+  })
 }
 
 // ---------------------------------------------------------------------------
-// Answer Matching
+// State: complete — quiz finished
 // ---------------------------------------------------------------------------
 
-function checkMatch(student, correct) {
-  const s = student.toLowerCase().trim()
-  const c = correct.toLowerCase().trim()
+function handleComplete(invocationId) {
+  sendResult(invocationId, {
+    state: 'complete',
+    score: getScoreData(),
+  })
+}
 
-  // Exact match
-  if (s === c) return true
+// ---------------------------------------------------------------------------
+// Score
+// ---------------------------------------------------------------------------
 
-  // Student answer contains the correct answer (e.g., "a cat" matches "cat")
-  if (s.includes(c)) return true
+function getScoreData() {
+  const correctCount = results.filter((r) => r.isCorrect).length
+  const missed = results
+    .filter((r) => !r.isCorrect)
+    .map((r) => ({ question: r.question, correctAnswer: r.correctAnswer, studentAnswer: r.studentAnswer }))
 
-  // Correct answer contains the student answer (e.g., "cat" matches for longer correct answers)
-  // Only if student answer is at least 3 chars to avoid trivial matches
-  if (s.length >= 3 && c.includes(s)) return true
-
-  return false
+  return {
+    correct: correctCount,
+    total: results.length,
+    deck: currentDeckName,
+    missed,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -231,7 +298,7 @@ function renderCard() {
   const card = document.getElementById('card')
   card.className = ''
 
-  if (!quizActive || currentIndex >= questions.length) {
+  if (appState === 'complete' || currentIndex >= questions.length) {
     renderEndScreen()
     return
   }
@@ -245,7 +312,7 @@ function renderCard() {
   `
 }
 
-function showFeedback(isCorrect, correctAnswer, quizComplete) {
+function showFeedback(isCorrect, correctAnswer) {
   const card = document.getElementById('card')
   card.className = isCorrect ? 'correct' : 'incorrect'
 
@@ -261,18 +328,7 @@ function showFeedback(isCorrect, correctAnswer, quizComplete) {
   }
 
   card.innerHTML = html
-
-  if (feedbackTimeout) clearTimeout(feedbackTimeout)
-
-  feedbackTimeout = setTimeout(() => {
-    feedbackTimeout = null
-    if (quizComplete) {
-      renderEndScreen()
-    } else {
-      renderCard()
-    }
-    resizeFrame()
-  }, 1500)
+  resizeFrame()
 }
 
 function renderEndScreen() {
@@ -302,7 +358,6 @@ function renderEndScreen() {
   }
 
   card.innerHTML = html
-  quizActive = false
 }
 
 function updateScoreCounter() {
@@ -344,7 +399,8 @@ function resetQuiz() {
   questions = []
   currentIndex = 0
   results = []
-  quizActive = false
+  appState = 'idle'
+  pendingStudentAnswer = ''
   if (feedbackTimeout) {
     clearTimeout(feedbackTimeout)
     feedbackTimeout = null
