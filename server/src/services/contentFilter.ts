@@ -5,7 +5,8 @@
  * Logs all matches to content_filter_log table.
  */
 
-import { execute } from '../db/queries.js'
+import { z } from 'zod'
+import { execute, queryRows } from '../db/queries.js'
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 
@@ -189,11 +190,66 @@ export function getBlocklistWords(): Array<{ word: string; severity: Severity }>
   return currentWords.map(({ word, severity }) => ({ word, severity }))
 }
 
-/** Replace the blocklist with new words */
+/** Replace the blocklist with new words and persist to DB */
 export function setBlocklistWords(words: Array<{ word: string; severity: Severity }>): void {
   currentWords = [...words]
   blocklist = buildBlocklist(currentWords)
   console.info('[content-filter] Blocklist updated:', words.length, 'entries')
+  void saveBlocklist(words)
+}
+
+// ---------------------------------------------------------------------------
+// DB Persistence
+// ---------------------------------------------------------------------------
+
+const BLOCKLIST_KEY = 'content_filter_blocklist'
+
+const BlocklistValueSchema = z.array(z.object({ word: z.string(), severity: z.enum(['low', 'medium', 'critical']) }))
+
+async function ensureSettingsTable(): Promise<void> {
+  await execute(`
+    CREATE TABLE IF NOT EXISTS platform_settings (
+      key   TEXT PRIMARY KEY,
+      value JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `)
+}
+
+async function saveBlocklist(words: Array<{ word: string; severity: Severity }>): Promise<void> {
+  try {
+    await ensureSettingsTable()
+    await execute(
+      `INSERT INTO platform_settings (key, value, updated_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = now()`,
+      [BLOCKLIST_KEY, JSON.stringify(words)],
+    )
+  } catch (err) {
+    console.error('[content-filter] Failed to persist blocklist:', err)
+  }
+}
+
+/** Load blocklist from DB on startup. Falls back to defaults if not found. */
+export async function loadBlocklist(): Promise<void> {
+  try {
+    await ensureSettingsTable()
+    const SettingRow = z.object({ value: z.unknown() })
+    const rows = await queryRows(SettingRow, `SELECT value FROM platform_settings WHERE key = $1`, [BLOCKLIST_KEY])
+    const row = rows[0]
+    if (row) {
+      const parsed = BlocklistValueSchema.safeParse(row.value)
+      if (parsed.success) {
+        currentWords = parsed.data
+        blocklist = buildBlocklist(currentWords)
+        console.info('[content-filter] Loaded blocklist from DB:', currentWords.length, 'entries')
+        return
+      }
+    }
+    console.info('[content-filter] No saved blocklist found, using defaults')
+  } catch (err) {
+    console.error('[content-filter] Failed to load blocklist from DB, using defaults:', err)
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -105,6 +105,13 @@ CREATE TABLE content_filter_log (
     created_at      TIMESTAMPTZ DEFAULT now()
 );
 
+-- Platform key-value settings (blocklist, config)
+CREATE TABLE platform_settings (
+    key         TEXT PRIMARY KEY,
+    value       JSONB NOT NULL,
+    updated_at  TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX idx_messages_conversation ON messages(conversation_id, created_at);
 CREATE INDEX idx_invocations_user ON tool_invocations(user_id, created_at);
 CREATE INDEX idx_apps_status ON apps(status);

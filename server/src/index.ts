@@ -3,6 +3,7 @@ import express from 'express'
 import { env } from './env.js'
 import { errorHandler } from './middleware/error-handler.js'
 import { apiRouter } from './routes/index.js'
+import { loadBlocklist } from './services/contentFilter.js'
 
 const app = express()
 
@@ -10,6 +11,8 @@ app.use(cors({ origin: env.CORS_ORIGIN }))
 app.use(express.json())
 app.use('/api', apiRouter)
 app.use(errorHandler)
+
+void loadBlocklist()
 
 const server = app.listen(env.PORT, () => {
   console.info(`[server] listening on :${String(env.PORT)} (${env.NODE_ENV})`)
