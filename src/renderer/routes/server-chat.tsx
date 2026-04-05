@@ -26,7 +26,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from '@/lib/api'
 import type { Conversation, ConversationWithMessages, SseEvent } from '@/lib/api'
-import { useAuthInfoStore } from '@/stores/authInfoStore'
+import { authInfoStore, useAuthInfoStore } from '@/stores/authInfoStore'
 import { AppHost } from '@/components/apps/AppHost'
 import type { AppHostHandle } from '@/components/apps/AppHost'
 

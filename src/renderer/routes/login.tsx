@@ -25,7 +25,7 @@ function LoginPage() {
         { accessToken: result.accessToken, refreshToken: result.refreshToken },
         result.user,
       )
-      void navigate({ to: '/server-chat' })
+      void navigate({ to: '/server-chat', search: { conv: undefined } })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed'
       setError(message)

@@ -30,7 +30,7 @@ export function AdminNav({ current }: AdminNavProps) {
         variant="subtle"
         size="xs"
         leftSection={<IconArrowLeft size={14} />}
-        onClick={() => void navigate({ to: '/server-chat' })}
+        onClick={() => void navigate({ to: '/server-chat', search: { conv: undefined } })}
       >
         Chat
       </Button>

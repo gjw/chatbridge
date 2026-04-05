@@ -3,7 +3,7 @@ import { ofetch, type FetchOptions } from 'ofetch'
 import { authInfoStore } from '@/stores/authInfoStore'
 
 /** Wrap ofetch to handle 401 by logging out and redirecting to /login */
-async function authedFetch<T>(url: string, opts: FetchOptions): Promise<T> {
+async function authedFetch<T>(url: string, opts: FetchOptions<'json'>): Promise<T> {
   try {
     return await ofetch<T>(url, opts)
   } catch (err: unknown) {

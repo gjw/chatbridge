@@ -542,7 +542,7 @@ export const Route = createRootRoute({
 
     // Redirect root to server-chat (the old Chatbox index is unused)
     if (location.pathname === '/') {
-      throw redirect({ to: '/server-chat' })
+      throw redirect({ to: '/server-chat', search: { conv: undefined } })
     }
   },
   component: () => {
