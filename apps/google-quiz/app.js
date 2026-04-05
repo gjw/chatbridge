@@ -285,6 +285,11 @@ function toolCheckAnswer(invocationId, params) {
 
   // Always let the LLM do the real grading — we just show the UI
   const alreadyAnswered = card.term in score.answers
+  if (!alreadyAnswered) {
+    score.answers[card.term] = isClose
+    if (isClose) score.correct++
+    else score.incorrect++
+  }
 
   // Show card UI
   cardEl.classList.remove('hidden')
