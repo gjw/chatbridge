@@ -481,9 +481,12 @@ K-12 is the use case. This is not an afterthought — it's load-bearing architec
 
 **`allow-same-origin` is required** — without it, the iframe gets an opaque
 `"null"` origin and `postMessage` origin validation breaks (the platform
-validates `event.origin` against the app's registered `entryUrl`). Platform
-cookies/storage are protected by the app being hosted on a separate origin
-(its own subdirectory under `/apps/`), not by the sandbox flag.
+validates `event.origin` against the app's registered `entryUrl`). This is
+safe because apps are hosted on a **dedicated asset domain**
+(`cb-assets.foramerica.dev`), separate from the platform origin
+(`chatbridge.foramerica.dev`). The browser's same-origin policy prevents
+apps from accessing platform cookies, localStorage (where JWTs are stored),
+or the parent DOM — regardless of the sandbox flag.
 
 **Deliberately omitted sandbox flags:**
 
