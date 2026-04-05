@@ -29,6 +29,7 @@ import type { Conversation, ConversationWithMessages, SseEvent } from '@/lib/api
 import { authInfoStore, useAuthInfoStore } from '@/stores/authInfoStore'
 import { AppHost } from '@/components/apps/AppHost'
 import type { AppHostHandle } from '@/components/apps/AppHost'
+import Markdown from '@/components/Markdown'
 
 export const Route = createFileRoute('/server-chat')({
   component: ServerChatPage,
@@ -433,9 +434,15 @@ function ServerChatPage() {
                           : 'var(--mantine-color-default)',
                     }}
                   >
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                      {m.text || (streaming && m.role === 'assistant' ? '...' : '')}
-                    </Text>
+                    {m.role === 'assistant' ? (
+                      <div className="server-chat-markdown" style={{ fontSize: 'var(--mantine-font-size-sm)' }}>
+                        <Markdown>{m.text || (streaming ? '...' : '')}</Markdown>
+                      </div>
+                    ) : (
+                      <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                        {m.text}
+                      </Text>
+                    )}
                   </Paper>
                 ))}
                 {activeToolCall?.status === 'invoking' && (
