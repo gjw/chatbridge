@@ -383,3 +383,61 @@ export async function updateBlocklist(token: string, words: BlocklistWord[]) {
   })
   return raw as { count: number }
 }
+
+// ---------------------------------------------------------------------------
+// Admin / Activity Dashboard
+// ---------------------------------------------------------------------------
+
+const ActivityEntrySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  student_name: z.string(),
+  student_email: z.string(),
+  message_count: z.number(),
+  apps_used: z.array(z.string()),
+  created_at: z.string(),
+  updated_at: z.string(),
+})
+export type ActivityEntry = z.infer<typeof ActivityEntrySchema>
+
+const ToolStatSchema = z.object({
+  app_slug: z.string(),
+  total: z.number(),
+  success: z.number(),
+  error: z.number(),
+  timeout: z.number(),
+})
+export type ToolStat = z.infer<typeof ToolStatSchema>
+
+const ActivityStatsSchema = z.object({
+  totalStudents: z.number(),
+  totalConversations: z.number(),
+  todayInvocations: z.number(),
+  toolStats: z.array(ToolStatSchema),
+})
+export type ActivityStats = z.infer<typeof ActivityStatsSchema>
+
+export async function getActivity(
+  token: string,
+  opts?: { limit?: number; offset?: number; student?: string; since?: string; app?: string },
+) {
+  const params = new URLSearchParams()
+  if (opts?.limit) params.set('limit', String(opts.limit))
+  if (opts?.offset) params.set('offset', String(opts.offset))
+  if (opts?.student) params.set('student', opts.student)
+  if (opts?.since) params.set('since', opts.since)
+  if (opts?.app) params.set('app', opts.app)
+  const qs = params.toString()
+
+  const raw = await authedFetch(`/api/admin/activity${qs ? `?${qs}` : ''}`, {
+    headers: authHeaders(token),
+  })
+  return z.array(ActivityEntrySchema).parse(raw)
+}
+
+export async function getActivityStats(token: string) {
+  const raw = await authedFetch('/api/admin/stats', {
+    headers: authHeaders(token),
+  })
+  return ActivityStatsSchema.parse(raw)
+}

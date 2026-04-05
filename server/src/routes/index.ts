@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { adminRouter } from './admin.js'
 import { appsRouter } from './apps.js'
 import { authRouter } from './auth.js'
 import { chatRouter } from './chat.js'
@@ -10,6 +11,7 @@ import { safetyRouter } from './safety.js'
 const router = Router()
 
 router.use(healthRouter)
+router.use('/admin', adminRouter)
 router.use('/auth', authRouter)
 router.use('/apps', appsRouter)
 router.use('/conversations', chatRouter)

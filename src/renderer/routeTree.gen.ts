@@ -44,6 +44,7 @@ import { Route as CopilotsMyImport } from './routes/copilots/my'
 import { Route as CopilotsFeaturedImport } from './routes/copilots/featured'
 import { Route as AdminSafetyImport } from './routes/admin/safety'
 import { Route as AdminAppsImport } from './routes/admin/apps'
+import { Route as AdminActivityImport } from './routes/admin/activity'
 import { Route as SettingsProviderRouteImport } from './routes/settings/provider/route'
 import { Route as SettingsProviderIndexImport } from './routes/settings/provider/index'
 import { Route as SettingsProviderProviderIdImport } from './routes/settings/provider/$providerId'
@@ -249,6 +250,12 @@ const AdminAppsRoute = AdminAppsImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const AdminActivityRoute = AdminActivityImport.update({
+  id: '/admin/activity',
+  path: '/admin/activity',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const SettingsProviderRouteRoute = SettingsProviderRouteImport.update({
   id: '/provider',
   path: '/provider',
@@ -342,6 +349,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/provider'
       preLoaderRoute: typeof SettingsProviderRouteImport
       parentRoute: typeof SettingsRouteImport
+    }
+    '/admin/activity': {
+      id: '/admin/activity'
+      path: '/admin/activity'
+      fullPath: '/admin/activity'
+      preLoaderRoute: typeof AdminActivityImport
+      parentRoute: typeof rootRoute
     }
     '/admin/apps': {
       id: '/admin/apps'
@@ -641,6 +655,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/server-chat': typeof ServerChatRoute
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/admin/activity': typeof AdminActivityRoute
   '/admin/apps': typeof AdminAppsRoute
   '/admin/safety': typeof AdminSafetyRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
@@ -677,6 +692,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/server-chat': typeof ServerChatRoute
+  '/admin/activity': typeof AdminActivityRoute
   '/admin/apps': typeof AdminAppsRoute
   '/admin/safety': typeof AdminSafetyRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
@@ -718,6 +734,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/server-chat': typeof ServerChatRoute
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/admin/activity': typeof AdminActivityRoute
   '/admin/apps': typeof AdminAppsRoute
   '/admin/safety': typeof AdminSafetyRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
@@ -760,6 +777,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/server-chat'
     | '/settings/provider'
+    | '/admin/activity'
     | '/admin/apps'
     | '/admin/safety'
     | '/copilots/featured'
@@ -795,6 +813,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/server-chat'
+    | '/admin/activity'
     | '/admin/apps'
     | '/admin/safety'
     | '/copilots/featured'
@@ -834,6 +853,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/server-chat'
     | '/settings/provider'
+    | '/admin/activity'
     | '/admin/apps'
     | '/admin/safety'
     | '/copilots/featured'
@@ -874,6 +894,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   ServerChatRoute: typeof ServerChatRoute
+  AdminActivityRoute: typeof AdminActivityRoute
   AdminAppsRoute: typeof AdminAppsRoute
   AdminSafetyRoute: typeof AdminSafetyRoute
   SessionSessionIdRoute: typeof SessionSessionIdRoute
@@ -891,6 +912,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   ServerChatRoute: ServerChatRoute,
+  AdminActivityRoute: AdminActivityRoute,
   AdminAppsRoute: AdminAppsRoute,
   AdminSafetyRoute: AdminSafetyRoute,
   SessionSessionIdRoute: SessionSessionIdRoute,
@@ -917,6 +939,7 @@ export const routeTree = rootRoute
         "/login",
         "/register",
         "/server-chat",
+        "/admin/activity",
         "/admin/apps",
         "/admin/safety",
         "/session/$sessionId",
@@ -983,6 +1006,9 @@ export const routeTree = rootRoute
         "/settings/provider/",
         "/settings/provider/chatbox-ai/"
       ]
+    },
+    "/admin/activity": {
+      "filePath": "admin/activity.tsx"
     },
     "/admin/apps": {
       "filePath": "admin/apps.tsx"
