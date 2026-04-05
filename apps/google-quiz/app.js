@@ -166,6 +166,25 @@ function extractSheetId(urlOrId) {
 }
 
 async function toolLoadDeck(invocationId, params) {
+  // If a deck is already loaded and quiz is in progress, return current state
+  // instead of re-fetching and resetting. This prevents the LLM from
+  // accidentally wiping quiz progress by re-calling load_deck.
+  if (deck.length > 0 && appState !== 'no_deck' && appState !== 'complete') {
+    const card = deck[currentIndex]
+    const correctSoFar = results.filter(r => r.isCorrect).length
+    sendResult(invocationId, {
+      alreadyLoaded: true,
+      termCount: deck.length,
+      state: appState,
+      term: card ? card.term : undefined,
+      questionNumber: currentIndex + 1,
+      totalQuestions: deck.length,
+      score: { correct: correctSoFar, answered: results.length, total: deck.length },
+      message: `Deck already loaded (${deck.length} terms). Quiz in progress — question ${currentIndex + 1}/${deck.length}, ${correctSoFar}/${results.length} correct so far. Do NOT call load_deck again. Use next_turn to continue.`,
+    })
+    return
+  }
+
   const statusEl = document.getElementById('status')
   const deckInfoEl = document.getElementById('deck-info')
 

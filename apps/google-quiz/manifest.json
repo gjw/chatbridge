@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "authorize_google",
-      "description": "Connect the student's Google account so the app can read shared Google Sheets. Call ONCE at the start of a session, NEVER again after it returns authorized:true.",
+      "description": "ONE-TIME setup: connect Google account. Call ONCE at session start. If result contains authorized:true, NEVER call again — go straight to load_deck or next_turn.",
       "parameters": {
         "type": "object",
         "properties": {},
@@ -17,7 +17,7 @@
     },
     {
       "name": "load_deck",
-      "description": "Load a flashcard deck from a Google Sheet. The sheet should have columns: Term, Definition, and optionally Hint. Pass the sheet URL or ID. After this succeeds, use next_turn to quiz.",
+      "description": "ONE-TIME setup: load a flashcard deck from a Google Sheet URL/ID. Call ONCE after authorize_google. If a quiz is already in progress, returns current state without resetting. After loading, ONLY use next_turn — never call load_deck again.",
       "parameters": {
         "type": "object",
         "properties": {

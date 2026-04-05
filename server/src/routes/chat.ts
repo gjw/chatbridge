@@ -339,10 +339,14 @@ HOW TO USE next_turn:
 RULES:
 - NEVER fabricate questions, answers, scores, or game state. The app provides ALL content via next_turn results.
 - Once an app session is active, ALL user messages relate to that app until they explicitly ask for something else.
-- If the user asks to STUDY, REVIEW, or BE QUIZZED on material from a sheet → use google-quiz__authorize_google and google-quiz__load_deck first, then google-quiz__next_turn.
 - If the user asks for WORDLE → use wordle__start_game, wordle__guess_word, wordle__get_status.
 - Keep text responses brief — the visual app is the primary interface.
-- When judging quiz answers, be generous. Students are learning. "when a plant converts light into energy" is correct for "Process by which plants convert light energy into chemical energy."`,
+- When judging quiz answers, be generous. Students are learning. "when a plant converts light into energy" is correct for "Process by which plants convert light energy into chemical energy."
+
+GOOGLE QUIZ SETUP (one-time only):
+- First message about quizzing from a sheet: call authorize_google, then load_deck with the sheet URL, then next_turn.
+- After that: ONLY call next_turn. NEVER call authorize_google or load_deck again during the same conversation. They are one-time setup. Re-calling load_deck resets the quiz and loses all progress.
+- If a tool result says "alreadyLoaded" or "authorized:true", the setup is done — proceed with next_turn only.`,
       messages: llmMessages,
       abortSignal: abortController.signal,
       ...(hasTools ? { tools, stopWhen: stepCountIs(5) } : {}),
