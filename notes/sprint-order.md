@@ -1,57 +1,75 @@
 # Sprint Order — ChatBridge Final
 
 **Deadline:** Sun 2026-04-05 midnight CT
-**Strategy:** Address grader feedback directly. Admin/teacher side first, then auth+polish, then docs+demo.
+**Strategy:** Close gaps between docs and code. Fix bugs visible in demo. Quick wins first — we may stop at any checkpoint to test and submit.
 
-## Grader Feedback (Early Submission)
+## Completed Phases
 
-> Student experience is the most built out — spend more time on admin and teacher side.
-> Consolidate parts of the student experience. Focus on polish, auth flows, and a
-> clean end-to-end lifecycle demo.
+- **Phase 1** — Teacher/Admin (cb-4hm, cb-q5x) DONE
+- **Phase 2** — Auth & Student Polish (cb-rvk, cb-dlk) DONE
+- **Phase 3 partial** — cb-e6z refactor DONE, cb-07b docs DONE
 
-## Phase 1 — Teacher/Admin (feedback target) ✅
+## Phase 4 — Polish & Bug Fixes (today, ordered by impact/effort)
 
-1. **cb-4hm** Teacher activity dashboard ✅
-2. **cb-q5x** Admin navigation + role visibility ✅
+Stop-safe after each item. Cumulative value maximized at every checkpoint.
 
-## Phase 2 — Auth & Student Polish ✅
+### Quick Wins (~55 min total)
 
-3. **cb-rvk** Google OAuth verification + auth polish ✅
-4. **cb-dlk** Conversation auto-titles + UX cleanup ✅
+1. **cb-69v** Hide raw JSON tool results from student view (10min)
+   - Every tool call shows `JSON.stringify(result)` to students. Hide it.
 
-## Phase 3 — Refinement & Docs (today)
+2. **cb-xat** Add spinner during tool invocations (10min)
+   - PRD: "lack of expected indicators will be frowned upon"
 
-5. **cb-e6z** Refactor quiz apps to state-machine tool pattern
-   - Improves the app quality we're demoing — polish our best ideas
+3. **cb-pzy** Fix iframe sandbox: remove `allow-same-origin` (10min)
+   - ARCHITECTURE.md says omitted; code includes it. Security credibility gap.
 
-6. **cb-07b** README + app developer guide
-   - README.md: overview, setup, env vars, deployed link
-   - docs/app-developer-guide.md: manifest format, bridge protocol, quick start
+4. **cb-tm4** Fix 6 typecheck errors (15min)
+   - Was 192, now 6. Missing `search` on navigate calls + wrong var name.
+   - Makes `pnpm typecheck` pass.
 
-7. **Testing, fixes, and polish round**
-   - Manual walkthrough of all user flows (student, teacher, admin)
-   - Fix anything broken or janky discovered during testing
-   - Review skipped beads (cb-t68, cb-piw, cb-mrr, cb-6vp, cb-tm4) — pick up any quick wins
+5. **cb-on7** Auth redirect guard (10min)
+   - Unauthenticated → /login redirect for /server-chat and /admin/*
 
-8. **cb-gdx** Final demo script (script only, no recording)
-   - Updated demo flow: student → safety trigger → teacher dashboard → app registry → OAuth
-   - Teacher activity dashboard is the showcase piece
+**--- STOP POINT 1: Test all user flows, could go to demo ---**
 
-9. **cb-umv** Record final demo video
-   - Record from the script. 3-5 minutes. Last thing we do.
+### High-Impact Medium Tasks (~65 min total)
 
-## Skipping (review before cb-gdx)
+6. **cb-uq7** Fix activity dashboard apps_used (20min)
+   - Teacher dashboard showcase piece shows empty apps_used. Fix join.
 
-- **cb-t68** Conversation summaries (Loop C seed) — architecture describes it, table exists
-- **cb-piw** Stockfish integration — flashy but doesn't address feedback
-- **cb-mrr** Strip Sentry — cleanup, grader won't notice
-- **cb-6vp** Fix test file references — cleanup
-- **cb-tm4** Fix upstream type errors — cleanup
+7. **cb-e58** Filter LLM streaming output (30min)
+   - CRITICAL: safety #1 grading axis. Streaming bypasses content filter entirely.
 
-## Execution Notes
+8. **cb-ot1** Circuit breaker user-facing error (15min)
+   - Apps silently disappear on failure. Add graceful message.
 
-- cb-e6z first — polishes the apps before we document and demo them.
-- cb-07b next — docs reflect the finished state.
-- Testing round catches anything broken before we write the demo script.
-- Skipped beads get a final review during the testing round — grab any 15-min wins.
-- cb-gdx (script) then cb-umv (recording) are the last two steps.
+**--- STOP POINT 2: Very solid, safe for final demo ---**
+
+### Polish (~60 min total)
+
+9. **cb-4v4** Persist blocklist to DB (20min)
+   - Admin blocklist edits lost on restart. Safety feature completeness.
+
+10. **cb-6vp** Fix test file references (10min)
+    - 2 files reference deleted desktop_platform. Makes test output cleaner.
+
+11. **cb-xbr** Markdown rendering in server-chat (30min)
+    - Plain text → markdown for assistant messages. Better demo visuals.
+
+**--- STOP POINT 3: Comprehensive ---**
+
+### Stretch
+
+12. **cb-t68** Loop C seed: conversation summaries (45min)
+    - Table exists, no code writes to it. Thin implementation shows three-loop vision.
+
+## Demo & Submit
+
+13. **cb-gdx** Final demo script
+14. **cb-umv** Record final demo video (last thing we do)
+
+## Skipping
+
+- **cb-piw** Stockfish — doesn't address grader feedback
+- **cb-mrr** Strip Sentry — 18 files, low impact, risky cleanup
