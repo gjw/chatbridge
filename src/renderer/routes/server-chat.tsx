@@ -205,7 +205,7 @@ function ServerChatPage() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === `tool-${evt.toolCallId}`
-            ? { ...m, text: `${evt.appSlug}/${evt.toolName}: ${JSON.stringify(result)}` }
+            ? { ...m, text: `Used ${evt.appSlug}/${evt.toolName}` }
             : m,
         ),
       )
