@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "authorize_google",
-      "description": "Connect the student's Google account so the app can read shared Google Sheets. Must be called before load_deck.",
+      "description": "Connect the student's Google account so the app can read shared Google Sheets. Call ONCE at the start of a session, NEVER again after it returns authorized:true. If you already called this and got authorized:true, skip it and go straight to load_deck or check_answer.",
       "parameters": {
         "type": "object",
         "properties": {},
