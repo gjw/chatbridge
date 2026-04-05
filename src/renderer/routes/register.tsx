@@ -26,7 +26,7 @@ function RegisterPage() {
         { accessToken: result.accessToken, refreshToken: result.refreshToken },
         result.user,
       )
-      void navigate({ to: '/' })
+      void navigate({ to: '/server-chat' })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Registration failed'
       setError(message)

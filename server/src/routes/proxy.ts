@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { queryRows } from '../db/queries.js'
 import { pool } from '../db/pool.js'
 import { AppRowSchema, AppInstallationRowSchema } from '../db/schemas.js'
+import { env } from '../env.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -58,17 +59,31 @@ router.post('/', async (req, res, next) => {
       return
     }
 
-    // For external_auth apps, inject the stored OAuth token
+    // For external_auth apps, inject the stored OAuth token (refresh if expired)
     let headers: Record<string, string> | undefined = requestHeaders
     const app = apps[0]!
     if (app.trust_tier === 'external_auth') {
       const tokenResult = await pool.query(
-        `SELECT access_token FROM oauth_tokens WHERE user_id = $1 AND app_id = $2`,
+        `SELECT access_token, refresh_token, expires_at FROM oauth_tokens WHERE user_id = $1 AND app_id = $2`,
         [userId, appId],
       )
-      const tokenRow = tokenResult.rows[0] as { access_token: string } | undefined
+      const tokenRow = tokenResult.rows[0] as
+        | { access_token: string; refresh_token: string | null; expires_at: Date | null }
+        | undefined
+
       if (tokenRow) {
-        headers = { ...headers, Authorization: `Bearer ${tokenRow.access_token}` }
+        let accessToken = tokenRow.access_token
+
+        // Refresh if expired or expiring within 5 minutes
+        const fiveMinFromNow = new Date(Date.now() + 5 * 60 * 1000)
+        if (tokenRow.refresh_token && tokenRow.expires_at && tokenRow.expires_at < fiveMinFromNow) {
+          const refreshed = await refreshGoogleToken(tokenRow.refresh_token, userId, appId)
+          if (refreshed) {
+            accessToken = refreshed
+          }
+        }
+
+        headers = { ...headers, Authorization: `Bearer ${accessToken}` }
       }
     }
 
@@ -108,5 +123,53 @@ router.post('/', async (req, res, next) => {
     next(err)
   }
 })
+
+// ---------------------------------------------------------------------------
+// Token refresh helper
+// ---------------------------------------------------------------------------
+
+const GoogleTokenResponse = z.object({
+  access_token: z.string(),
+  expires_in: z.number(),
+})
+
+async function refreshGoogleToken(
+  refreshToken: string,
+  userId: string,
+  appId: string,
+): Promise<string | null> {
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: env.GOOGLE_CLIENT_ID,
+        client_secret: env.GOOGLE_CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    })
+
+    if (!response.ok) {
+      console.error('[proxy] Google token refresh failed:', response.status)
+      return null
+    }
+
+    const data = GoogleTokenResponse.parse(await response.json())
+    const expiresAt = new Date(Date.now() + data.expires_in * 1000)
+
+    await pool.query(
+      `UPDATE oauth_tokens SET access_token = $1, expires_at = $2
+       WHERE user_id = $3 AND app_id = $4`,
+      [data.access_token, expiresAt, userId, appId],
+    )
+
+    console.info('[proxy] Refreshed Google token for user:', userId)
+    return data.access_token
+  } catch (err) {
+    console.error('[proxy] Token refresh error:', err)
+    return null
+  }
+}
 
 export { router as proxyRouter }
