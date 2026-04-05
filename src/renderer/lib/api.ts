@@ -441,3 +441,20 @@ export async function getActivityStats(token: string) {
   })
   return ActivityStatsSchema.parse(raw)
 }
+
+const UserListEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  role: z.enum(['student', 'teacher', 'admin']),
+  created_at: z.string(),
+  conversation_count: z.number(),
+})
+export type UserListEntry = z.infer<typeof UserListEntrySchema>
+
+export async function getUsers(token: string) {
+  const raw = await authedFetch('/api/admin/users', {
+    headers: authHeaders(token),
+  })
+  return z.array(UserListEntrySchema).parse(raw)
+}

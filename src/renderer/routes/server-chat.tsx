@@ -12,7 +12,16 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
-import { IconLogout, IconPlus, IconSend, IconShield, IconTrash } from '@tabler/icons-react'
+import {
+  IconActivity,
+  IconApps,
+  IconLogout,
+  IconPlus,
+  IconSend,
+  IconShield,
+  IconTrash,
+  IconUsers,
+} from '@tabler/icons-react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from '@/lib/api'
@@ -329,16 +338,53 @@ function ServerChatPage() {
 
         <Stack gap={4} mt="auto" pt="sm" style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
           {user?.role !== 'student' && (
-            <Button
-              variant="subtle"
-              size="xs"
-              leftSection={<IconShield size={14} />}
-              onClick={() => void navigate({ to: '/admin/safety' })}
-              fullWidth
-              justify="flex-start"
-            >
-              Safety Dashboard
-            </Button>
+            <>
+              <Text size="xs" c="dimmed" fw={700} tt="uppercase" px={4} pt={4}>
+                Admin
+              </Text>
+              <Button
+                variant="subtle"
+                size="xs"
+                leftSection={<IconActivity size={14} />}
+                onClick={() => void navigate({ to: '/admin/activity' })}
+                fullWidth
+                justify="flex-start"
+              >
+                Activity
+              </Button>
+              <Button
+                variant="subtle"
+                size="xs"
+                leftSection={<IconShield size={14} />}
+                onClick={() => void navigate({ to: '/admin/safety' })}
+                fullWidth
+                justify="flex-start"
+              >
+                Safety
+              </Button>
+              <Button
+                variant="subtle"
+                size="xs"
+                leftSection={<IconApps size={14} />}
+                onClick={() => void navigate({ to: '/admin/apps' })}
+                fullWidth
+                justify="flex-start"
+              >
+                Apps
+              </Button>
+              {user?.role === 'admin' && (
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  leftSection={<IconUsers size={14} />}
+                  onClick={() => void navigate({ to: '/admin/users' })}
+                  fullWidth
+                  justify="flex-start"
+                >
+                  Users
+                </Button>
+              )}
+            </>
           )}
           <Button
             variant="subtle"

@@ -20,6 +20,7 @@ import { useCallback, useEffect, useState } from 'react'
 import * as api from '@/lib/api'
 import type { FilterLogEntry, BlocklistWord } from '@/lib/api'
 import { useAuthInfoStore } from '@/stores/authInfoStore'
+import { AdminNav } from '@/components/admin/AdminNav'
 
 export const Route = createFileRoute('/admin/safety')({
   component: SafetyDashboard,
@@ -49,6 +50,7 @@ function SafetyDashboard() {
 
   return (
     <Box p="xl" maw={1100} mx="auto">
+      <AdminNav current="safety" />
       <Title order={2} mb="lg">
         Content Safety Dashboard
       </Title>

@@ -42,6 +42,7 @@ import { Route as DevContextGeneratorImport } from './routes/dev/context-generat
 import { Route as CopilotsSearchImport } from './routes/copilots/search'
 import { Route as CopilotsMyImport } from './routes/copilots/my'
 import { Route as CopilotsFeaturedImport } from './routes/copilots/featured'
+import { Route as AdminUsersImport } from './routes/admin/users'
 import { Route as AdminSafetyImport } from './routes/admin/safety'
 import { Route as AdminAppsImport } from './routes/admin/apps'
 import { Route as AdminActivityImport } from './routes/admin/activity'
@@ -238,6 +239,12 @@ const CopilotsFeaturedRoute = CopilotsFeaturedImport.update({
   getParentRoute: () => CopilotsRouteRoute,
 } as any)
 
+const AdminUsersRoute = AdminUsersImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const AdminSafetyRoute = AdminSafetyImport.update({
   id: '/admin/safety',
   path: '/admin/safety',
@@ -369,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/safety'
       fullPath: '/admin/safety'
       preLoaderRoute: typeof AdminSafetyImport
+      parentRoute: typeof rootRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersImport
       parentRoute: typeof rootRoute
     }
     '/copilots/featured': {
@@ -658,6 +672,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/apps': typeof AdminAppsRoute
   '/admin/safety': typeof AdminSafetyRoute
+  '/admin/users': typeof AdminUsersRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
   '/copilots/search': typeof CopilotsSearchRoute
@@ -695,6 +710,7 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/apps': typeof AdminAppsRoute
   '/admin/safety': typeof AdminSafetyRoute
+  '/admin/users': typeof AdminUsersRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
   '/copilots/search': typeof CopilotsSearchRoute
@@ -737,6 +753,7 @@ export interface FileRoutesById {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/apps': typeof AdminAppsRoute
   '/admin/safety': typeof AdminSafetyRoute
+  '/admin/users': typeof AdminUsersRoute
   '/copilots/featured': typeof CopilotsFeaturedRoute
   '/copilots/my': typeof CopilotsMyRoute
   '/copilots/search': typeof CopilotsSearchRoute
@@ -780,6 +797,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/apps'
     | '/admin/safety'
+    | '/admin/users'
     | '/copilots/featured'
     | '/copilots/my'
     | '/copilots/search'
@@ -816,6 +834,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/apps'
     | '/admin/safety'
+    | '/admin/users'
     | '/copilots/featured'
     | '/copilots/my'
     | '/copilots/search'
@@ -856,6 +875,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/apps'
     | '/admin/safety'
+    | '/admin/users'
     | '/copilots/featured'
     | '/copilots/my'
     | '/copilots/search'
@@ -897,6 +917,7 @@ export interface RootRouteChildren {
   AdminActivityRoute: typeof AdminActivityRoute
   AdminAppsRoute: typeof AdminAppsRoute
   AdminSafetyRoute: typeof AdminSafetyRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   SessionSessionIdRoute: typeof SessionSessionIdRoute
   TaskTaskIdRoute: typeof TaskTaskIdRoute
   GuideIndexRoute: typeof GuideIndexRoute
@@ -915,6 +936,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminActivityRoute: AdminActivityRoute,
   AdminAppsRoute: AdminAppsRoute,
   AdminSafetyRoute: AdminSafetyRoute,
+  AdminUsersRoute: AdminUsersRoute,
   SessionSessionIdRoute: SessionSessionIdRoute,
   TaskTaskIdRoute: TaskTaskIdRoute,
   GuideIndexRoute: GuideIndexRoute,
@@ -942,6 +964,7 @@ export const routeTree = rootRoute
         "/admin/activity",
         "/admin/apps",
         "/admin/safety",
+        "/admin/users",
         "/session/$sessionId",
         "/task/$taskId",
         "/guide/",
@@ -1015,6 +1038,9 @@ export const routeTree = rootRoute
     },
     "/admin/safety": {
       "filePath": "admin/safety.tsx"
+    },
+    "/admin/users": {
+      "filePath": "admin/users.tsx"
     },
     "/copilots/featured": {
       "filePath": "copilots/featured.tsx",

@@ -26,6 +26,7 @@ import { useCallback, useEffect, useState } from 'react'
 import * as api from '@/lib/api'
 import type { App } from '@/lib/api'
 import { useAuthInfoStore } from '@/stores/authInfoStore'
+import { AdminNav } from '@/components/admin/AdminNav'
 
 export const Route = createFileRoute('/admin/apps')({
   component: AdminAppsPage,
@@ -100,6 +101,7 @@ function AdminAppsPage() {
 
   return (
     <Box p="xl" maw={1000} mx="auto">
+      <AdminNav current="apps" />
       <Group justify="space-between" mb="lg">
         <Title order={2}>App Registry</Title>
         {isAdmin && (

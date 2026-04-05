@@ -151,4 +151,47 @@ router.get('/stats', async (_req, res, next) => {
   }
 })
 
+// ---------------------------------------------------------------------------
+// GET /admin/users — user list (teacher: students only, admin: all)
+// ---------------------------------------------------------------------------
+
+const UsersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+const UserListRowSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  email: z.string(),
+  role: z.enum(['student', 'teacher', 'admin']),
+  created_at: z.date(),
+  conversation_count: z.coerce.number(),
+})
+
+router.get('/users', async (req, res, next) => {
+  try {
+    const { limit, offset } = UsersQuerySchema.parse(req.query)
+    const isAdmin = req.user!.role === 'admin'
+
+    const roleFilter = isAdmin ? '' : "WHERE u.role = 'student'"
+
+    const rows = await queryRows(
+      UserListRowSchema,
+      `SELECT u.id, u.name, u.email, u.role, u.created_at,
+              COUNT(c.id)::int AS conversation_count
+       FROM users u
+       LEFT JOIN conversations c ON c.user_id = u.id
+       ${roleFilter}
+       GROUP BY u.id
+       ORDER BY u.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset],
+    )
+    res.json(rows)
+  } catch (err) {
+    next(err)
+  }
+})
+
 export { router as adminRouter }

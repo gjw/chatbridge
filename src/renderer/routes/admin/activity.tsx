@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as api from '@/lib/api'
 import type { ActivityEntry, ActivityStats } from '@/lib/api'
 import { useAuthInfoStore } from '@/stores/authInfoStore'
+import { AdminNav } from '@/components/admin/AdminNav'
 
 export const Route = createFileRoute('/admin/activity')({
   component: ActivityDashboard,
@@ -89,6 +90,7 @@ function ActivityContent({ accessToken }: { accessToken: string }) {
 
   return (
     <Box p="xl" maw={1200} mx="auto">
+      <AdminNav current="activity" />
       <Group justify="space-between" mb="lg">
         <Title order={2}>Student Activity</Title>
         <Tooltip label="Refresh">
