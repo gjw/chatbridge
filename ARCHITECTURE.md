@@ -473,15 +473,20 @@ K-12 is the use case. This is not an afterthought — it's load-bearing architec
 ```html
 <iframe
   src="{app.entryUrl}"
-  sandbox="allow-scripts"
+  sandbox="allow-scripts allow-same-origin"
   referrerpolicy="no-referrer"
   loading="lazy"
 ></iframe>
 ```
 
+**`allow-same-origin` is required** — without it, the iframe gets an opaque
+`"null"` origin and `postMessage` origin validation breaks (the platform
+validates `event.origin` against the app's registered `entryUrl`). Platform
+cookies/storage are protected by the app being hosted on a separate origin
+(its own subdirectory under `/apps/`), not by the sandbox flag.
+
 **Deliberately omitted sandbox flags:**
 
-- `allow-same-origin` — prevents app from accessing platform cookies/storage
 - `allow-top-navigation` — prevents app from redirecting the page
 - `allow-popups` — prevents app from opening new windows
 - `allow-forms` — prevents app from submitting forms outside the iframe
