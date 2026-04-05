@@ -9,7 +9,7 @@ import { stepCountIs } from 'ai'
 import { buildToolSet } from '../services/tools.js'
 import { submitResult as submitToolResult } from '../services/toolCalls.js'
 import { AppToolDefSchema } from '../shared/app-schemas.js'
-import { filterText, logFilterMatch, classifyContent } from '../services/contentFilter.js'
+import { filterText, filterStreamChunk, flushBuffer, logFilterMatch, classifyContent } from '../services/contentFilter.js'
 import type { ModelMessage } from '@ai-sdk/provider-utils'
 
 const router = Router()
@@ -351,11 +351,27 @@ RULES:
 
     // 8. Iterate full stream for both text and tool events
     let fullText = ''
+    let filterBuffer = ''
     for await (const part of result.fullStream) {
       switch (part.type) {
         case 'text-delta': {
           fullText += part.text
-          sseWrite(res, { type: 'text-delta', text: part.text })
+          const filtered = filterStreamChunk(part.text, filterBuffer)
+          filterBuffer = filtered.buffer
+          if (filtered.output) {
+            sseWrite(res, { type: 'text-delta', text: filtered.output })
+          }
+          if (filtered.matched.length > 0 && filtered.severity) {
+            void logFilterMatch({
+              userId,
+              conversationId,
+              content: part.text,
+              matchedWords: filtered.matched,
+              severity: filtered.severity,
+              source: 'llm_output',
+              actionTaken: filtered.severity === 'critical' ? 'logged' : 'redacted',
+            })
+          }
           break
         }
         case 'tool-call': {
@@ -380,6 +396,25 @@ RULES:
         // Ignore other part types (text-start, text-end, step markers, etc.)
         default:
           break
+      }
+    }
+
+    // Flush remaining buffer through filter
+    if (filterBuffer) {
+      const flushed = flushBuffer(filterBuffer)
+      if (flushed.clean) {
+        sseWrite(res, { type: 'text-delta', text: flushed.clean })
+      }
+      if (flushed.matched.length > 0 && flushed.severity) {
+        void logFilterMatch({
+          userId,
+          conversationId,
+          content: filterBuffer,
+          matchedWords: flushed.matched,
+          severity: flushed.severity,
+          source: 'llm_output',
+          actionTaken: flushed.severity === 'critical' ? 'logged' : 'redacted',
+        })
       }
     }
 
