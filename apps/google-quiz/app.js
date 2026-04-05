@@ -10,6 +10,7 @@ let appId = null
 let sessionId = null
 let deck = []        // Array of { term, definition, hint }
 let score = { correct: 0, incorrect: 0, answers: {} }
+let googleAuthorized = false
 
 // ---------------------------------------------------------------------------
 // Bridge protocol
@@ -124,6 +125,7 @@ function handleOAuthComplete() {
   // Trust that the OAuth callback succeeded — it stores the token server-side
   // and shows "Success" to the user before they close the popup.
   const statusEl = document.getElementById('status')
+  googleAuthorized = true
   statusEl.textContent = 'Google connected!'
   resizeFrame()
   sendResult(invocationId, { authorized: true, message: 'Successfully connected to Google. You can now load a sheet.' })
@@ -136,6 +138,11 @@ async function checkAuthStatus() {
 }
 
 function toolAuthorizeGoogle(invocationId) {
+  if (googleAuthorized) {
+    sendResult(invocationId, { authorized: true, message: 'Already connected to Google.' })
+    return
+  }
+
   const statusEl = document.getElementById('status')
 
   statusEl.innerHTML = '<button class="connect-btn" id="connect-btn">Connect Google</button><p style="margin-top:8px;color:#57606a;font-size:13px;">Sign in to access your teacher\'s flashcard sheets</p>'

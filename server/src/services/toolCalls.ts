@@ -6,7 +6,7 @@
  * then POSTs the result back, which resolves the promise.
  */
 
-const TOOL_CALL_TIMEOUT_MS = 30_000
+const TOOL_CALL_TIMEOUT_MS = 120_000 // 2 minutes — OAuth flows need more time
 
 interface PendingCall {
   resolve: (result: unknown) => void
