@@ -40,6 +40,17 @@ export function buildToolSet(
   for (const app of apps) {
     if (isOpen(app.slug)) {
       console.warn(`[tools] Skipping app "${app.slug}" — circuit breaker open`)
+      // Register a stub tool that tells the LLM the app is unavailable
+      for (const appTool of app.tools) {
+        const toolKey = `${app.slug}__${appTool.name}`
+        toolSet[toolKey] = {
+          description: `[${app.slug}] ${appTool.description}`,
+          inputSchema: jsonSchema(appTool.parameters),
+          execute: async (): Promise<unknown> => {
+            return { error: `The ${app.slug} app is temporarily unavailable due to repeated errors. Please try again later.` }
+          },
+        }
+      }
       continue
     }
 
