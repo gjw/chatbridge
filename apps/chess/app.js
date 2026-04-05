@@ -12,6 +12,7 @@ let game = null          // chess.js instance
 let playerColor = 'w'    // 'w' or 'b'
 let selectedSquare = null // currently selected square for click-to-move
 let lastMove = null       // { from, to } for highlighting
+let resigned = false      // chess.js has no resign concept, track separately
 let appId = null
 let sessionId = null
 
@@ -90,7 +91,7 @@ function handleToolInvoke(msg) {
     if (!game) {
       // No game — need color to start, or return no_game state
       handleNoGame(invocationId, input)
-    } else if (getGameStatus() !== 'in_progress') {
+    } else if (resigned || getGameStatus() !== 'in_progress') {
       // Game over — can start new game with color, or return result
       handleGameOver(invocationId, input)
     } else {
@@ -109,8 +110,9 @@ function handleToolInvoke(msg) {
 function handleNoGame(invocationId, input) {
   if (input.color) {
     // Start a new game
-    const color = input.color === 'black' ? 'b' : 'w'
-    playerColor = color
+    const chosenColor = input.color === 'black' ? 'black' : 'white'
+    playerColor = chosenColor === 'black' ? 'b' : 'w'
+    resigned = false
     game = new Chess()
     selectedSquare = null
     lastMove = null
@@ -122,7 +124,7 @@ function handleNoGame(invocationId, input) {
       state: 'awaiting_move',
       fen: game.fen(),
       gameStatus: 'in_progress',
-      playerColor: input.color || 'white',
+      playerColor: chosenColor,
       turn: 'white',
       moveCount: 1,
     })
@@ -142,6 +144,7 @@ function handleNoGame(invocationId, input) {
 function handleInProgress(invocationId, input) {
   // Resign
   if (input.resign) {
+    resigned = true
     const winner = game.turn() === 'w' ? 'black' : 'white'
     updateStatusText(`Game over: ${game.turn() === 'w' ? 'White' : 'Black'} resigned. ${winner} wins!`)
 
@@ -240,6 +243,7 @@ function resetGame() {
   game = null
   selectedSquare = null
   lastMove = null
+  resigned = false
   document.getElementById('board').innerHTML = ''
   updateStatusText('Waiting to start...')
   document.getElementById('turn-indicator').textContent = ''
