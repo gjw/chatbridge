@@ -16,7 +16,7 @@
 
 *Start on the login screen.*
 
-"ChatBridge is an AI chat platform for K-12 education. Third-party apps register tools, render UI inside the conversation, and communicate bidirectionally with the AI — all sandboxed, filtered, and logged."
+> ChatBridge is an AI chat platform for K-12 education. Third-party apps register tools, render UI inside the conversation, and communicate bidirectionally with the AI — all sandboxed, filtered, and logged.
 
 *Log in as student. Show the server-chat page, click New Chat.*
 
@@ -28,13 +28,13 @@ Type: **"let's play chess, I'll be white"**
 
 Wait for the board to appear.
 
-"The AI recognized the intent, invoked the chess app's next_turn tool, and the board rendered in a sandboxed iframe. The app is hosted on a separate asset domain for origin isolation."
+> The AI recognized the intent, invoked the chess app's next_turn tool, and the board rendered in a sandboxed iframe. The app is hosted on a separate asset domain for origin isolation.
 
 Play 2-3 moves. The AI will respond with its moves and the board updates.
 
 Type: **"what should I do here?"**
 
-"The AI can analyze the board state because every tool result flows through it — it knows the FEN position, whose turn it is, and can reason about strategy. The visual board is for the student; the data channel is for the AI."
+> The AI can analyze the board state because every tool result flows through it — it knows the FEN position, whose turn it is, and can reason about strategy. The visual board is for the student; the data channel is for the AI.
 
 *If it goes well, play another move or two. If it stalls, move on.*
 
@@ -48,11 +48,11 @@ Type: **"quiz me from my Google Sheet"** and provide the URL when asked (or incl
 
 Wait for the OAuth popup. Click through Google consent.
 
-"This is the external_auth trust tier. The platform handles the entire OAuth flow — the app requests authorization via the bridge protocol, the parent opens the popup, Google's callback hits our server, and the token is stored server-side. The iframe never sees credentials."
+> This is the external_auth trust tier. The platform handles the entire OAuth flow — the app requests authorization via the bridge protocol, the parent opens the popup, Google's callback hits our server, and the token is stored server-side. The iframe never sees credentials.
 
 Answer 2-3 questions.
 
-"The quiz app is a state machine — the AI calls next_turn, reads the state field, presents the question, waits for the student's answer, judges it, and advances. All content comes from the Google Sheet, not the AI."
+> The quiz app is a state machine — the AI calls next_turn, reads the state field, presents the question, waits for the student's answer, judges it, and advances. All content comes from the Google Sheet, not the AI.
 
 ## Act 4: Teacher Dashboard (~60s)
 
@@ -62,7 +62,7 @@ Answer 2-3 questions.
 
 ### Safety Dashboard
 
-"While the student was chatting, the teacher's safety dashboard has been updating in real time."
+> While the student was chatting, the teacher's safety dashboard has been updating in real time.
 
 Point out the flagged content entries — severity badges (low/medium/critical), source labels (user_input, llm_output, tool_result), matched words.
 
@@ -72,13 +72,13 @@ Point out the flagged content entries — severity badges (low/medium/critical),
 
 *Switch to teacher window. The new entry should appear within 5 seconds.*
 
-"Every message passes through a three-tier content filter. Tier 1 is a keyword blocklist — instant, sub-millisecond. Tier 2 is a sentiment classifier using a fast model that catches crisis signals and bullying that keywords miss. Everything is logged here for teacher review."
+> Every message passes through a three-tier content filter. Tier 1 is a keyword blocklist — instant, sub-millisecond. Tier 2 is a sentiment classifier using a fast model that catches crisis signals and bullying that keywords miss. Everything is logged here for teacher review.
 
 ### Activity Dashboard
 
 Navigate to Activity (`/admin/activity`).
 
-"Teachers see all student conversations — which apps were used, how many messages, tool invocation stats. They can click into any conversation to review it."
+> Teachers see all student conversations — which apps were used, how many messages, tool invocation stats. They can click into any conversation to review it.
 
 Point out the stats cards (total students, conversations, tool calls today) and the per-app breakdown (success/error/timeout counts).
 
@@ -86,7 +86,7 @@ Point out the stats cards (total students, conversations, tool calls today) and 
 
 Navigate to Apps (`/admin/apps`).
 
-"Teachers approve or block apps before students can use them. Each app declares its tools, trust tier, and permissions in a manifest validated by the platform."
+> Teachers approve or block apps before students can use them. Each app declares its tools, trust tier, and permissions in a manifest validated by the platform.
 
 Show the trust tier badges (Internal, Public, OAuth). Show the approve/block toggle if any app is pending.
 
@@ -94,17 +94,17 @@ Show the trust tier badges (Internal, Public, OAuth). Show the approve/block tog
 
 *Talk over the code or ARCHITECTURE.md. Can screen-share the doc or a diagram.*
 
-"Three key architectural decisions:"
+> Three key architectural decisions:
 
-**1. Origin isolation.** "Apps are served from cb-assets.foramerica.dev — a separate origin from the platform. The browser's same-origin policy enforces isolation. Apps can't access platform cookies, localStorage, or the DOM."
+> **Origin isolation.** Apps are served from cb-assets.foramerica.dev — a separate origin from the platform. The browser's same-origin policy enforces isolation. Apps can't access platform cookies, localStorage, or the DOM.
 
-**2. Bridge protocol.** "Communication between the platform and app iframes is structured postMessage — typed, Zod-validated, origin-checked. The platform sends tool invocations; apps return results. Every message goes through schema validation."
+> **Bridge protocol.** Communication between the platform and app iframes is structured postMessage — typed, Zod-validated, origin-checked. The platform sends tool invocations; apps return results. Every message goes through schema validation.
 
-**3. Server-orchestrated tool pipeline.** "The LLM never talks to apps directly. It calls tools, the server sends an SSE event to the client, the client routes to the iframe, the app executes and returns a result, the result passes through the content filter, and flows back to the LLM. The server holds all secrets — OAuth tokens, API keys — and proxies requests on behalf of apps."
+> **Server-orchestrated tool pipeline.** The LLM never talks to apps directly. It calls tools, the server sends an SSE event to the client, the client routes to the iframe, the app executes and returns a result, the result passes through the content filter, and flows back to the LLM. The server holds all secrets — OAuth tokens, API keys — and proxies requests on behalf of apps.
 
 ## Closing (~10s)
 
-"Five apps across three trust tiers — internal, external public, and external with OAuth. Real-time safety monitoring, role-based access, and audit logging. Deployed at chatbridge.foramerica.dev."
+> Five apps across three trust tiers — internal, external public, and external with OAuth. Real-time safety monitoring, role-based access, and audit logging. Deployed at chatbridge.foramerica.dev.
 
 ---
 

@@ -74,8 +74,8 @@ CREATE TABLE oauth_tokens (
     user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
     app_id          UUID REFERENCES apps(id) ON DELETE CASCADE,
     provider        TEXT NOT NULL,
-    access_token    TEXT NOT NULL,   -- encrypted at rest (pgcrypto)
-    refresh_token   TEXT,            -- encrypted at rest
+    access_token    TEXT NOT NULL,
+    refresh_token   TEXT,
     expires_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ DEFAULT now(),
     UNIQUE(user_id, app_id, provider)

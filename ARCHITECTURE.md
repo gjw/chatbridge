@@ -9,7 +9,7 @@ Fork of [Chatbox](https://github.com/chatboxai/chatbox) with plugin architecture
 |-------|--------|-----|
 | **Frontend** | Chatbox web build (React 18 / Mantine / Tailwind / Zustand+Jotai) | Already built, proven UI. Web build mode strips Electron. |
 | **Backend** | Node 24 / Express | Familiar, fast to ship. Handles app registry, auth, trust enforcement, LLM proxy. |
-| **Database** | PostgreSQL 16 (Docker) | Multi-user platform needs real concurrency, structured queries, encrypted token storage. |
+| **Database** | PostgreSQL 16 (Docker) | Multi-user platform needs real concurrency, structured queries, server-side token storage. |
 | **LLM** | Vercel AI SDK (multi-provider) | Already in Chatbox. Supports OpenAI, Anthropic, Google with streaming + tool calling. |
 | **App sandbox** | Iframes + postMessage | Only option that provides real isolation for K-12. CSP + sandbox attributes. |
 | **Auth** | JWT (platform) + OAuth2 proxy (per-app) | Server holds all tokens. Apps never see credentials. |
@@ -181,8 +181,8 @@ CREATE TABLE oauth_tokens (
     user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
     app_id          UUID REFERENCES apps(id) ON DELETE CASCADE,
     provider        TEXT NOT NULL,
-    access_token    TEXT NOT NULL,   -- encrypted at rest (pgcrypto)
-    refresh_token   TEXT,            -- encrypted at rest
+    access_token    TEXT NOT NULL,
+    refresh_token   TEXT,
     expires_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ DEFAULT now(),
     UNIQUE(user_id, app_id, provider)
@@ -575,7 +575,7 @@ render anything it wants visually. Mitigations:
 
 - Apps cannot read other apps' data
 - Apps cannot access conversation history (only receive explicit tool invocations)
-- OAuth tokens stored server-side, encrypted, never sent to iframes
+- OAuth tokens stored server-side, never sent to iframes
 - Student PII never included in tool invocation parameters
 
 ### Role-Based Access
@@ -614,7 +614,7 @@ A Trench agent needs to understand these five concepts:
    `external_public` (API key, server-held), `external_auth` (OAuth2, server-proxied).
    Determines approval requirements and data access.
 
-5. **Token Custody** — Server holds all secrets. OAuth tokens encrypted in Postgres.
+5. **Token Custody** — Server holds all secrets. OAuth tokens stored in Postgres.
    Apps request API calls via `bridge:api:request`; platform proxies with credentials.
    Tokens never reach the browser.
 
