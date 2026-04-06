@@ -14,6 +14,19 @@ Content safety is built into the architecture, not bolted on. Every LLM response
 
 For full architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## Testing the Google Sheets Quiz
+
+The Google Quiz app pulls flashcard decks from Google Sheets. To try it:
+
+1. Log in and start a conversation
+2. Say **"quiz me from this sheet"** and paste this URL:
+   `https://docs.google.com/spreadsheets/d/1I8gctRZenDKaNQ2N9mfafi5jHtJY1gYjMcmghsEut4g/edit`
+3. Click **Connect Google** when the app prompts you
+4. Google will show an **"unverified app"** warning — click **Advanced** → **Go to ChatBridge (unsafe)** → authorize
+5. The quiz loads terms from the sheet and the AI tutors you through them
+
+Any Google account works. The sheet is publicly readable and the OAuth scope is read-only (`spreadsheets.readonly`).
+
 ## Key Features
 
 - **Multi-role authentication** — Students, teachers, and admins with role-based access control
