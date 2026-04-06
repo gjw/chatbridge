@@ -22,10 +22,12 @@ The Google Quiz app pulls flashcard decks from Google Sheets. To try it:
 2. Say **"quiz me from this sheet"** and paste this URL:
    `https://docs.google.com/spreadsheets/d/1I8gctRZenDKaNQ2N9mfafi5jHtJY1gYjMcmghsEut4g/edit`
 3. Click **Connect Google** when the app prompts you
-4. Google will show an **"unverified app"** warning — click **Advanced** → **Go to ChatBridge (unsafe)** → authorize
+4. Authorize with your Google account (read-only Sheets access)
 5. The quiz loads terms from the sheet and the AI tutors you through them
 
-Any Google account works. The sheet is publicly readable and the OAuth scope is read-only (`spreadsheets.readonly`).
+**Note on Google OAuth:** Google requires a lengthy verification process before an OAuth app can be used by arbitrary accounts. I've pre-added known Gauntlet grader addresses to the testing whitelist. If you hit an authorization error, please reach out and I'll add your Google account — it takes under a minute. The OAuth flow itself is fully functional and demonstrated in the demo video.
+
+The sheet is publicly readable and the OAuth scope is read-only (`spreadsheets.readonly`).
 
 ## Key Features
 
