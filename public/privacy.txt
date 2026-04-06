@@ -1,0 +1,27 @@
+ChatBridge Privacy Policy
+Last updated: April 6, 2026
+
+ChatBridge is an educational software project developed for academic purposes (Gauntlet AI, Week 7). It is not a commercial product.
+
+Data We Collect
+- Account information: name, email, and hashed password for platform login.
+- Chat messages: conversation content stored in our database for the session.
+- OAuth tokens: if you connect a Google account, we store an access token and refresh token server-side to read Google Sheets on your behalf. We request read-only access (spreadsheets.readonly).
+- Usage logs: tool invocations and content filter events are logged for teacher review.
+
+How We Use Data
+- To provide the chat and app integration features of the platform.
+- To filter content for student safety (K-12 use case).
+- To display activity and safety dashboards for teachers/admins.
+
+Data Sharing
+- We do not sell or share your data with third parties.
+- OAuth tokens are used only to proxy API requests to Google on your behalf. Third-party apps in the platform never see your credentials.
+
+Data Retention
+- This is a demo/academic project. Data may be reset at any time.
+- You may request deletion of your data by contacting the project author.
+
+Contact
+Gabriel Wilkins
+Project repository: https://chatbridge.foramerica.dev
